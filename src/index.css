@@ -1,0 +1,54 @@
+/* Import a modern font for a cleaner look */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Fira+Code&display=swap');
+
+/* --- DARK MODE THEME (DEFAULT) --- */
+:root {
+  --bg-color: #121212;
+  --panel-bg: rgba(34, 34, 38, 0.75);
+  --border-color: rgba(67, 67, 77, 0.5);
+  --text-color: #e1e1e6;
+  --text-muted: #a8a8b3;
+  --accent-blue: #00aaff;
+  --accent-green: #00e676;
+  --accent-yellow: #ffc400;
+  --accent-red: #ff3d71;
+  --font-family: 'Inter', sans-serif;
+  --font-mono: 'Fira Code', monospace;
+  --stack-element-bg: #003f80;
+  --stack-visual-bg: #1a1a1d;
+  --button-text-color: white;
+  --highlight-bg: rgba(0, 170, 255, 0.15); /* Slightly increased opacity */
+}
+
+/* --- LIGHT MODE THEME --- */
+body.light {
+  --bg-color: #f4f4f5;
+  --panel-bg: rgba(255, 255, 255, 0.7);
+  --border-color: #d4d4d8;
+  --text-color: #18181b;
+  --text-muted: #52525b;
+  --accent-blue: #007bff;
+  --accent-green: #16a34a;
+  --accent-yellow: #f59e0b;
+  --accent-red: #dc2626;
+  --stack-element-bg: #cce5ff;
+  --stack-visual-bg: #e9ecef;
+  --button-text-color: white;
+  --highlight-bg: rgba(0, 123, 255, 0.2); /* Increased opacity for better contrast */
+}
+
+/* Base body styles */
+body {
+  background-color: var(--bg-color);
+  transition: background-color 0.3s ease;
+  margin: 0;
+  font-family: var(--font-family);
+  overflow-x: auto; /* ===== ADDED: Allows horizontal scrolling on small screens ===== */
+}
+
+/* --- REFINED DARK MODE BACKGROUND --- */
+body.dark {
+    background-color: #0d1117;
+    background-image: radial-gradient(at 80% 20%, hsla(212,45%,15%,1) 0px, transparent 50%),
+                      radial-gradient(at 20% 100%, hsla(289,45%,15%,1) 0px, transparent 50%);
+}
