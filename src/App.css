@@ -23,6 +23,7 @@
     align-items: center;
     gap: 1.5rem;
     margin-top: 1.5rem;
+    flex-wrap: wrap; /* ADDED: Allows controls to wrap on small screens */
 }
 
 .visualizer-selector select {
@@ -32,6 +33,23 @@
   background-color: var(--panel-bg);
   color: var(--text-color);
   border: 1px solid var(--border-color);
+}
+
+/* ===== NEW: Styles for the theme toggle group ===== */
+.theme-toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background-color: var(--panel-bg);
+    padding: 0.25rem 0.25rem 0.25rem 1rem;
+    border-radius: 99px; /* Pill shape */
+    border: 1px solid var(--border-color);
+}
+
+.theme-toggle-container label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-muted);
 }
 
 .theme-toggle {

@@ -5,8 +5,8 @@ import './App.css';
 
 function App() {
   const [selectedVisualizer, setSelectedVisualizer] = useState('infixToPostfix');
-  // State to manage the current theme
-  const [theme, setTheme] = useState('dark');
+  // CHANGED: Default theme is now 'light'
+  const [theme, setTheme] = useState('light');
 
   // Effect to update the body class when the theme changes
   useEffect(() => {
@@ -42,9 +42,13 @@ function App() {
               ))}
             </select>
           </div>
-          <button onClick={toggleTheme} className="theme-toggle">
-            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-          </button>
+          {/* ADDED: New container for the theme toggle for better layout and clarity */}
+          <div className="theme-toggle-container">
+            <label htmlFor="theme-toggle-btn">Toggle Theme</label>
+            <button id="theme-toggle-btn" onClick={toggleTheme} className="theme-toggle">
+              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </button>
+          </div>
         </div>
       </header>
       <main>

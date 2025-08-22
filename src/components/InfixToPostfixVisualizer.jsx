@@ -92,6 +92,7 @@ function InfixToPostfixVisualizer() {
   const [error, setError] = useState(null);
   const [expressionTokens, setExpressionTokens] = useState([]);
   const intervalRef = useRef(null);
+  const logContainerRef = useRef(null); // ===== NEW: Ref for the log container for auto-scrolling =====
 
   useEffect(() => {
     if (isPlaying) {
@@ -104,6 +105,15 @@ function InfixToPostfixVisualizer() {
     } else { clearInterval(intervalRef.current); }
     return () => clearInterval(intervalRef.current);
   }, [isPlaying, steps.length, speed]);
+
+  // ===== NEW: Effect to auto-scroll the log panel =====
+  useEffect(() => {
+    if (logContainerRef.current) {
+        const element = logContainerRef.current;
+        element.scrollTop = element.scrollHeight;
+    }
+  }, [currentStep]); // Trigger scroll on every step change
+
 
   const generateSteps = () => {
     setError(null);
@@ -252,18 +262,8 @@ function InfixToPostfixVisualizer() {
 
       <div className="main-content-area">
         <div className="panels-container">
-          <div className="panel algorithm-panel">
-            <h3>Algorithm Steps</h3>
-            <ol>
-              {algorithmRules.map((rule, index) => (
-                <AlgorithmRule key={index} rule={rule} path={[index]} highlightedPath={currentData.highlightedRulePath} />
-              ))}
-            </ol>
-          </div>
-          <div className="panel explanation-panel">
-            <h3>Explanation</h3>
-            <p>{currentData.explanation}</p>
-          </div>
+          <div className="panel algorithm-panel"><h3>Algorithm Steps</h3><ol>{algorithmRules.map((rule, index) => (<AlgorithmRule key={index} rule={rule} path={[index]} highlightedPath={currentData.highlightedRulePath} />))}</ol></div>
+          <div className="panel explanation-panel"><h3>Explanation</h3><p>{currentData.explanation}</p></div>
           <div className="panel visualization-panel">
             <h3>Visualization</h3>
             <div className="stack-container">
@@ -287,24 +287,29 @@ function InfixToPostfixVisualizer() {
             </div>
         </div>
         
-        {/* ===== NEW: Operations Log Panel ===== */}
-        {steps.length > 1 && !error && (
+        {/* ===== UPDATED: Log panel now renders step-by-step ===== */}
+        {steps.length > 0 && !error && (
             <div className="panel log-panel">
                 <h3>Operations Log</h3>
-                <div className="log-container">
+                <div className="log-container" ref={logContainerRef}>
                     <div className="log-entry log-input">
                         <strong>Input Expression:</strong>
                         <span>{infix}</span>
                     </div>
-                    {steps.slice(1, -1).map((step, index) => (
+                    {/* Map only up to the current step */}
+                    {steps.slice(1, currentStep + 1).map((step, index) => (
+                       step.token && // Render only if it's an actual processing step
                         <div key={index} className="log-entry">
                             <span className="log-step-number">{index + 1}.</span> {step.explanation}
                         </div>
                     ))}
-                    <div className="log-entry log-output">
-                        <strong>Final Postfix:</strong>
-                        <span>{steps[steps.length - 1].postfix.join(' ')}</span>
-                    </div>
+                    {/* Show final output only on the last step */}
+                    {currentStep === steps.length - 1 && (
+                         <div className="log-entry log-output">
+                            <strong>Final Postfix:</strong>
+                            <span>{steps[steps.length - 1].postfix.join(' ')}</span>
+                        </div>
+                    )}
                 </div>
             </div>
         )}
