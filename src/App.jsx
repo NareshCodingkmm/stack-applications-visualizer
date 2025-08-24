@@ -8,6 +8,7 @@ import './App.css';
 
 function App() {
   const [selectedVisualizer, setSelectedVisualizer] = useState('infixToPostfix');
+  // ===== CHANGED: Default theme is now 'light' =====
   const [theme, setTheme] = useState('light');
 
   useEffect(() => {
@@ -33,7 +34,6 @@ function App() {
       component: <PostfixEvaluationVisualizer />,
     },
     prefixEvaluation: {
-      // ===== CORRECTED: The name and component had typos =====
       name: 'Evaluation of Prefix Expression',
       component: <PrefixEvaluationVisualizer />,
     },

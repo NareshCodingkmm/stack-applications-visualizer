@@ -5,11 +5,16 @@
   gap: 1.5rem;
   width: 100%;
   max-width: 1600px;
+  min-width: 1350px; /* ADDED: Prevents layout from collapsing on narrow screens */
   margin: 0 auto;
   font-family: var(--font-family);
   padding: 2rem;
   box-sizing: border-box;
 }
+
+/* ... (All other styles remain the same until the end of the file) ... */
+
+/* ===== REMOVED: All @media queries for responsiveness have been removed from the end of this file ===== */
 
 .controls {
   display: flex;

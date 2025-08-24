@@ -17,7 +17,7 @@
   --stack-element-bg: #003f80;
   --stack-visual-bg: #1a1a1d;
   --button-text-color: white;
-  --highlight-bg: rgba(0, 170, 255, 0.15); /* Slightly increased opacity */
+  --highlight-bg: rgba(0, 170, 255, 0.15);
 }
 
 /* --- LIGHT MODE THEME --- */
@@ -34,7 +34,7 @@ body.light {
   --stack-element-bg: #cce5ff;
   --stack-visual-bg: #e9ecef;
   --button-text-color: white;
-  --highlight-bg: rgba(0, 123, 255, 0.2); /* Increased opacity for better contrast */
+  --highlight-bg: rgba(0, 123, 255, 0.2);
 }
 
 /* Base body styles */
@@ -43,7 +43,7 @@ body {
   transition: background-color 0.3s ease;
   margin: 0;
   font-family: var(--font-family);
-  overflow-x: auto; /* ===== ADDED: Allows horizontal scrolling on small screens ===== */
+  overflow-x: auto; /* ADDED: Allows horizontal scrolling */
 }
 
 /* --- REFINED DARK MODE BACKGROUND --- */
