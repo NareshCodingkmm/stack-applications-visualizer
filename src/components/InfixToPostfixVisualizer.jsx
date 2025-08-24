@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, SkipBack, SkipForward, Binary } from 'lucide-react';
+import { Play, Pause, RotateCcw, SkipBack, SkipForward, Binary, Download } from 'lucide-react';
 import './InfixToPostfixVisualizer.css';
 
 // Helper function to define operator precedence
@@ -37,7 +37,7 @@ const algorithmRules = [
         subSteps: [
           { text: "If the top of the stack is a left parenthesis (, then push the current operator onto stack." },
           { text: "If the top of the stack is an operator with higher or equal precedence than the current operator, then pop all such operators from the stack and append them to output. After that, push the current operator onto stack." },
-          { text: "If the top of the stack is an operator with lower precedence than the current operator, then push the current operator onto stack." }
+          { text: "If the top of thestack is an operator with lower precedence than the current operator, then push the current operator onto stack." }
         ]
       }
     ]
@@ -224,6 +224,31 @@ function InfixToPostfixVisualizer() {
     setSteps(newSteps);
   };
   
+  const handleSaveLog = () => {
+    if (steps.length < 2) return;
+
+    const finalStep = steps[steps.length - 1];
+    let logContent = `Input Expression: ${infix}\n\n`;
+    logContent += "--- Operations Log ---\n";
+
+    steps.slice(1, steps.length - 1).forEach((step, index) => {
+        logContent += `${index + 1}. ${step.explanation}\n`;
+    });
+    
+    logContent += `\n${finalStep.explanation}\n\n`;
+    logContent += "--- Final Result ---\n";
+    logContent += `Final Postfix: ${finalStep.postfix.join(' ')}\n`;
+
+    const blob = new Blob([logContent], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'infix-to-postfix-log.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  };
+
   const handleReset = () => { setIsPlaying(false); setCurrentStep(0); setSteps([]); setError(null); setExpressionTokens([]); };
   const handlePlayPause = () => { if (steps.length === 0) generateSteps(); else setIsPlaying(!isPlaying); };
   const handleNext = () => currentStep < steps.length - 1 && setCurrentStep(currentStep + 1);
@@ -289,9 +314,17 @@ function InfixToPostfixVisualizer() {
             </div>
         </div>
         
-        {steps.length > 0 && !error && (
+        {steps.length > 1 && !error && (
             <div className="panel log-panel">
-                <h3>Operations Log</h3>
+                <h3>
+                  Operations Log
+                  {currentStep === steps.length - 1 && (
+                    <button onClick={handleSaveLog} className="save-log-button">
+                        <Download size={14} style={{ marginRight: '8px' }}/>
+                        Save Log
+                    </button>
+                  )}
+                </h3>
                 <div className="log-container" ref={logContainerRef}>
                     <div className="log-entry log-input">
                         <strong>Input Expression:</strong>

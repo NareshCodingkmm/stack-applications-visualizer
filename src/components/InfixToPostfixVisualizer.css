@@ -382,6 +382,37 @@
     color: var(--accent-green);
 }
 
+.log-panel h3 {
+  display: flex; /* ADDED: To align title and button */
+  justify-content: space-between; /* ADDED: To push button to the right */
+  align-items: center; /* ADDED: To vertically align */
+}
+
+.save-log-button {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+    font-weight: 500;
+    background-color: var(--stack-visual-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.save-log-button:hover {
+    background-color: var(--accent-blue);
+    color: var(--button-text-color);
+    border-color: var(--accent-blue);
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
 @media (max-width: 1200px) {
     .panels-container {
         flex-direction: column;

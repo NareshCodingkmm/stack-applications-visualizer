@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, SkipBack, SkipForward, Binary } from 'lucide-react';
+import { Play, Pause, RotateCcw, SkipBack, SkipForward, Binary, Download } from 'lucide-react';
 import './InfixToPostfixVisualizer.css'; 
 
 // Helper function to define operator precedence
@@ -36,7 +36,6 @@ const algorithmRules = [
         text: "If stack is not empty:",
         subSteps: [
           { text: "If the top of the stack is a right (or closed) parenthesis, then push the current operator onto stack." },
-          // ===== UPDATED: Final wording as requested =====
           { text: "If the top of the stack is an operator with higher or equal precedence than the current operator, then pop all such operators from the stack and prefix them to output. After that, push the current operator onto stack." },
           { text: "If the top of the stack is an operator with lower precedence than the current operator, then push the current operator onto stack." }
         ]
@@ -121,16 +120,21 @@ function InfixToPrefixVisualizer() {
     setSteps([]);
     setCurrentStep(0);
     
-    const reversedInfix = infix.split('').reverse().join('');
-    const tokens = reversedInfix.match(/\d+(\.\d+)?|[A-Za-z_][A-Za-z0-9_]*|[+\-*/^()]/g) || [];
-    setExpressionTokens(tokens);
-
-    const originalTokens = infix.match(/\d+(\.\d+)?|[A-Za-z_][A-Za-z0-9_]*|[+\-*/^()]/g);
+    // ===== UPDATED: Fixed the reversal logic =====
+    // 1. Tokenize the original expression first to handle multi-digit/char operands correctly.
+    const originalTokens = infix.match(/\d+(\.\d+)?|[A-Za-z_][A-Za-z0-9_]*|[+\-*/^()]/g) || [];
+    
+    // 2. Validate the original, un-reversed expression.
     const validationError = validateExpression(infix, originalTokens);
     if (validationError) {
         setError(validationError);
         return;
     }
+
+    // 3. Reverse the array of tokens. This is the correct way to reverse for processing.
+    const tokens = [...originalTokens].reverse();
+    setExpressionTokens(tokens);
+    // ===== END OF FIX =====
 
     const newSteps = [];
     let stack = [];
@@ -188,13 +192,12 @@ function InfixToPrefixVisualizer() {
             stack.push(token);
         } else {
             step.highlightedRulePath = [5, 1, 1];
-            // ===== UPDATED: Dynamic explanation to match the static rule =====
             if (precedence(token) < precedence(top)) {
                 step.explanation += `The top of the stack ('${top}') has higher precedence than '${token}', so pop all such operators from the stack and prefix to output. `;
             } else { // equal precedence
                 step.explanation += `The top of the stack ('${top}') has equal precedence to '${token}', so pop all such operators from the stack and prefix to output. `;
             }
-            while (stack.length > 0 && stack[stack.length - 1] !== ')' && precedence(token) <= precedence(stack[stack.length-1])) {
+            while (stack.length > 0 && stack[stack.length - 1] !== ')' && precedence(token) < precedence(stack[stack.length-1])) {
                 prefix = stack.pop() + (prefix ? ' ' : '') + prefix;
             }
             stack.push(token);
@@ -224,6 +227,31 @@ function InfixToPrefixVisualizer() {
       tokenIndex: -1,
     });
     setSteps(newSteps);
+  };
+
+  const handleSaveLog = () => {
+    if (steps.length < 2) return;
+
+    const finalStep = steps[steps.length - 1];
+    let logContent = `Input Expression: ${infix}\n\n`;
+    logContent += "--- Operations Log ---\n";
+
+    steps.slice(1, steps.length - 1).forEach((step, index) => {
+        logContent += `${index + 1}. ${step.explanation}\n`;
+    });
+    
+    logContent += `\n${finalStep.explanation}\n\n`;
+    logContent += "--- Final Result ---\n";
+    logContent += `Final Prefix: ${finalStep.prefix}\n`;
+
+    const blob = new Blob([logContent], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'infix-to-prefix-log.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
   };
   
   const handleReset = () => { setIsPlaying(false); setCurrentStep(0); setSteps([]); setError(null); setExpressionTokens([]); };
@@ -293,7 +321,15 @@ function InfixToPrefixVisualizer() {
         
         {steps.length > 1 && !error && (
             <div className="panel log-panel">
-                <h3>Operations Log</h3>
+                <h3>
+                  Operations Log
+                  {currentStep === steps.length - 1 && (
+                    <button onClick={handleSaveLog} className="save-log-button">
+                        <Download size={14} style={{ marginRight: '8px' }}/>
+                        Save Log
+                    </button>
+                  )}
+                </h3>
                 <div className="log-container" ref={logContainerRef}>
                     <div className="log-entry log-input"><strong>Input Expression:</strong><span>{infix}</span></div>
                     {steps.slice(1, currentStep + 1).map((step, index) => (
