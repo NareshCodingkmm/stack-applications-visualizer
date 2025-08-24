@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, SkipBack, SkipForward, Binary } from 'lucide-react';
-import './InfixToPostfixVisualizer.css';
+import './InfixToPostfixVisualizer.css'; 
 
 // Helper function to define operator precedence
 const precedence = (op) => {
@@ -15,17 +15,17 @@ const precedence = (op) => {
 const isOperator = (token) => ['+', '-', '*', '/', '^'].includes(token);
 const isOperand = (token) => !isOperator(token) && token !== '(' && token !== ')';
 
-// ===== UPDATED: New detailed 7-step algorithm for Postfix =====
+// Algorithm steps with the final corrected wording
 const algorithmRules = [
   { text: "Create an empty stack." },
-  { text: "Read the infix expression from left to right symbol by symbol." },
-  { text: "If the symbol is operand, then append it to the output." },
-  { text: "If the symbol is left (or open) parenthesis (, then push it onto the stack." },
+  { text: "Reverse the given infix expression, then read all the symbols from left to right." },
+  { text: "If the symbol is operand, then prefix it to output." },
+  { text: "If the symbol is right (or closed parenthesis), then push it onto stack." },
   {
-    text: "If the symbol is right (or closed) parenthesis ):",
+    text: "If the symbol is left (or open parenthesis):",
     subSteps: [
-      { text: "Pop all the operators from the stack and append them to output until a left (or open) parenthesis ( is encountered." },
-      { text: "Pop the left parenthesis (, but do not append it to output." }
+      { text: "Pop all the content from stack and prefix them to output, until we encounter the right (or closed) parenthesis." },
+      { text: "Pop the right (or closed) parenthesis, but do not prefix it to output." }
     ]
   },
   {
@@ -33,16 +33,17 @@ const algorithmRules = [
     subSteps: [
       { text: "If the stack is empty, then push the current operator onto stack." },
       {
-        text: "If the stack is not empty:",
+        text: "If stack is not empty:",
         subSteps: [
-          { text: "If the top of the stack is a left parenthesis (, then push the current operator onto stack." },
-          { text: "If the top of the stack is an operator with higher or equal precedence than the current operator, then pop all such operators from the stack and append them to output. After that, push the current operator onto stack." },
+          { text: "If the top of the stack is a right (or closed) parenthesis, then push the current operator onto stack." },
+          // ===== UPDATED: Final wording as requested =====
+          { text: "If the top of the stack is an operator with higher or equal precedence than the current operator, then pop all such operators from the stack and prefix them to output. After that, push the current operator onto stack." },
           { text: "If the top of the stack is an operator with lower precedence than the current operator, then push the current operator onto stack." }
         ]
       }
     ]
   },
-  { text: "After processing all symbols, pop all the remaining operators from the stack and append them to output." }
+  { text: "After processing all symbols, pop all the remaining operators from stack and prefix them to output." }
 ];
 
 // Comprehensive validation function
@@ -84,7 +85,7 @@ function AlgorithmRule({ rule, path, highlightedPath }) {
 }
 
 
-function InfixToPostfixVisualizer() {
+function InfixToPrefixVisualizer() {
   const [infix, setInfix] = useState('A * (B + C) - D/E');
   const [steps, setSteps] = useState([]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -120,19 +121,12 @@ function InfixToPostfixVisualizer() {
     setSteps([]);
     setCurrentStep(0);
     
-    const tokens = infix.match(/\d+(\.\d+)?|[A-Za-z_][A-Za-z0-9_]*|[+\-*/^()]/g) || [];
+    const reversedInfix = infix.split('').reverse().join('');
+    const tokens = reversedInfix.match(/\d+(\.\d+)?|[A-Za-z_][A-Za-z0-9_]*|[+\-*/^()]/g) || [];
     setExpressionTokens(tokens);
 
-    if (tokens.length === 0 && infix.trim() !== '') {
-        setError("Invalid characters found. Please use only letters, numbers, and valid operators.");
-        return;
-    }
-    if (infix.trim() === '') {
-        setError("Expression cannot be empty.");
-        return;
-    }
-
-    const validationError = validateExpression(infix, tokens);
+    const originalTokens = infix.match(/\d+(\.\d+)?|[A-Za-z_][A-Za-z0-9_]*|[+\-*/^()]/g);
+    const validationError = validateExpression(infix, originalTokens);
     if (validationError) {
         setError(validationError);
         return;
@@ -140,37 +134,43 @@ function InfixToPostfixVisualizer() {
 
     const newSteps = [];
     let stack = [];
-    let postfix = [];
+    let prefix = '';
     
     newSteps.push({
-      token: null, stack: [], postfix: [],
-      explanation: 'Algorithm starts. Reading expression tokens.',
-      highlightedRulePath: [0, 1], animatePostfix: false, tokenIndex: -1,
+      token: null, stack: [], prefix: '',
+      explanation: 'Algorithm starts. Reverse the expression and read tokens.',
+      highlightedRulePath: [0, 1], animatePrefix: false, tokenIndex: -1,
     });
 
     tokens.forEach((token, tokenIndex) => {
-      let step = { token, stack: [...stack], postfix: [...postfix], animatePostfix: false, tokenIndex };
+      let step = { token, stack: [...stack], prefix, animatePrefix: false, tokenIndex };
+
       if (isOperand(token)) {
-        postfix.push(token);
-        step.postfix = [...postfix];
-        step.explanation = `Token is an operand ('${token}'). Append it to the Postfix Output.`;
+        prefix = token + (prefix ? ' ' : '') + prefix;
+        step.prefix = prefix;
+        step.explanation = `Token is an operand ('${token}'). Prefix it to output.`;
         step.highlightedRulePath = [2];
-        step.animatePostfix = true;
-      } else if (token === '(') {
+        step.animatePrefix = true;
+      } else if (token === ')') {
         stack.push(token);
         step.stack = [...stack];
-        step.explanation = `Token is a left parenthesis ('('). Push it onto the stack.`;
+        step.explanation = `Token is a right parenthesis (')'). Push it onto stack.`;
         step.highlightedRulePath = [3];
-      } else if (token === ')') {
-        step.explanation = `Token is a right parenthesis (')'). Pop operators from the stack and append to the Postfix Output until a left parenthesis is found.`;
-        while (stack.length > 0 && stack[stack.length - 1] !== '(') { postfix.push(stack.pop()); }
-        if (stack.length > 0) { stack.pop(); } 
-        else { setError("Mismatched parentheses."); return; }
-        step.explanation += " Then, pop the left parenthesis from the stack, but do not append it to output.";
+      } else if (token === '(') {
+        step.explanation = `Token is a left parenthesis ('('). Pop content from stack and prefix to output until a ')' is found.`;
+        while (stack.length > 0 && stack[stack.length - 1] !== ')') {
+            prefix = stack.pop() + (prefix ? ' ' : '') + prefix;
+        }
+        if (stack.length > 0) { 
+            stack.pop();
+        } else { 
+            setError("Mismatched parentheses."); return; 
+        }
+        step.explanation += " Then, pop the right parenthesis from the stack, but do not prefix it to output.";
         step.stack = [...stack];
-        step.postfix = [...postfix];
+        step.prefix = prefix;
         step.highlightedRulePath = [4, 0, 1];
-        step.animatePostfix = true;
+        step.animatePrefix = true;
       } else if (isOperator(token)) {
         step.explanation = `Token is an operator ('${token}'). `;
         const top = stack.length > 0 ? stack[stack.length - 1] : null;
@@ -178,47 +178,49 @@ function InfixToPostfixVisualizer() {
             step.highlightedRulePath = [5, 0];
             step.explanation += `The stack is empty, so push the current operator onto the stack.`;
             stack.push(token);
-        } else if (top === '(') {
+        } else if (top === ')') {
             step.highlightedRulePath = [5, 1, 0];
-            step.explanation += `The top of the stack is a left parenthesis, so push the current operator onto the stack.`;
+            step.explanation += `The top of the stack is a right parenthesis, so push the current operator onto the stack.`;
             stack.push(token);
         } else if (precedence(token) > precedence(top)) {
             step.highlightedRulePath = [5, 1, 2];
-            // ===== UPDATED: Explanation text for clarity =====
-            step.explanation += `The top of the stack ('${top}') has lower precedence than '${token}', so push the current operator onto the stack.`
+            step.explanation += `The top of the stack ('${top}') has lower precedence than '${token}', so push '${token}' onto the stack.`
             stack.push(token);
         } else {
             step.highlightedRulePath = [5, 1, 1];
-            // ===== UPDATED: Explanation text for clarity =====
+            // ===== UPDATED: Dynamic explanation to match the static rule =====
             if (precedence(token) < precedence(top)) {
-                 step.explanation += `The top of the stack ('${top}') has higher precedence than '${token}', so pop all such operators from the stack and append to output. `;
+                step.explanation += `The top of the stack ('${top}') has higher precedence than '${token}', so pop all such operators from the stack and prefix to output. `;
             } else { // equal precedence
-                 step.explanation += `The top of the stack ('${top}') has equal precedence to '${token}', so pop all such operators from the stack and append to output. `;
+                step.explanation += `The top of the stack ('${top}') has equal precedence to '${token}', so pop all such operators from the stack and prefix to output. `;
             }
-            while (stack.length > 0 && stack[stack.length - 1] !== '(' && precedence(token) <= precedence(stack[stack.length-1])) {
-                postfix.push(stack.pop());
+            while (stack.length > 0 && stack[stack.length - 1] !== ')' && precedence(token) <= precedence(stack[stack.length-1])) {
+                prefix = stack.pop() + (prefix ? ' ' : '') + prefix;
             }
             stack.push(token);
             step.explanation += `After that, push the current operator '${token}' onto the stack.`
-            step.animatePostfix = true;
+            step.animatePrefix = true;
         }
         step.stack = [...stack];
-        step.postfix = [...postfix];
+        step.prefix = prefix;
       }
       newSteps.push(step);
     });
     
     let lastStepAnimate = stack.length > 0;
     while (stack.length > 0) {
-      if(stack[stack.length - 1] === '(') { setError("Mismatched parentheses."); return; }
-      postfix.push(stack.pop());
+      if(stack[stack.length - 1] === ')') {
+        setError("Mismatched parentheses."); 
+        return; 
+      }
+      prefix = stack.pop() + (prefix ? ' ' : '') + prefix;
     }
     
     newSteps.push({
-      token: null, stack: [...stack], postfix: [...postfix],
-      explanation: "After processing all symbols, pop all the remaining operators from the stack and append to output.",
+      token: null, stack: [...stack], prefix: prefix.trim(),
+      explanation: "After processing all symbols, pop all the remaining operators from stack and prefix them to output.",
       highlightedRulePath: [6],
-      animatePostfix: lastStepAnimate,
+      animatePrefix: lastStepAnimate,
       tokenIndex: -1,
     });
     setSteps(newSteps);
@@ -228,7 +230,7 @@ function InfixToPostfixVisualizer() {
   const handlePlayPause = () => { if (steps.length === 0) generateSteps(); else setIsPlaying(!isPlaying); };
   const handleNext = () => currentStep < steps.length - 1 && setCurrentStep(currentStep + 1);
   const handlePrev = () => currentStep > 0 && setCurrentStep(currentStep - 1);
-  const currentData = steps[currentStep] || { stack: [], postfix: [], explanation: 'Enter an infix expression and click Start.', token: null, highlightedRulePath: null, animatePostfix: false, tokenIndex: -1 };
+  const currentData = steps[currentStep] || { stack: [], prefix: '', explanation: 'Enter an infix expression and click Start.', token: null, highlightedRulePath: null, animatePrefix: false, tokenIndex: -1 };
   const stack = currentData.stack;
 
   return (
@@ -250,7 +252,7 @@ function InfixToPostfixVisualizer() {
       {steps.length > 0 && !error && (
           <div className="expression-display">
               <div className="given-expression">
-                <strong>Processing:</strong>
+                <strong>Processing Reversed:</strong>
                 <div className="expression-string">
                   {expressionTokens.map((t, index) => (
                     <span key={index} className={index === currentData.tokenIndex ? 'highlight-token' : 'token'}>
@@ -279,24 +281,21 @@ function InfixToPostfixVisualizer() {
           </div>
         </div>
         <div className="panel output-panel">
-            <h3>Postfix Output</h3>
+            <h3>Prefix Output</h3>
             <div className="output-visual">
-              {currentData.postfix.map((item, index) => (
-                <div key={`${index}-${item}`} className={`postfix-element ${index === currentData.postfix.length - 1 && currentData.animatePostfix ? 'animate-add' : ''}`}>
-                  {item}
-                </div>
+              {currentData.prefix.trim().split(' ').map((char, index) => (
+                  char && <div key={`${index}-${char}`} className={`prefix-element ${index === 0 && currentData.animatePrefix ? 'animate-add' : ''}`}>
+                      {char}
+                  </div>
               ))}
             </div>
         </div>
         
-        {steps.length > 0 && !error && (
+        {steps.length > 1 && !error && (
             <div className="panel log-panel">
                 <h3>Operations Log</h3>
                 <div className="log-container" ref={logContainerRef}>
-                    <div className="log-entry log-input">
-                        <strong>Input Expression:</strong>
-                        <span>{infix}</span>
-                    </div>
+                    <div className="log-entry log-input"><strong>Input Expression:</strong><span>{infix}</span></div>
                     {steps.slice(1, currentStep + 1).map((step, index) => (
                        step.token && 
                         <div key={index} className="log-entry">
@@ -304,10 +303,7 @@ function InfixToPostfixVisualizer() {
                         </div>
                     ))}
                     {currentStep === steps.length - 1 && (
-                         <div className="log-entry log-output">
-                            <strong>Final Postfix:</strong>
-                            <span>{steps[steps.length - 1].postfix.join(' ')}</span>
-                        </div>
+                         <div className="log-entry log-output"><strong>Final Prefix:</strong><span>{steps[steps.length - 1].prefix}</span></div>
                     )}
                 </div>
             </div>
@@ -317,4 +313,4 @@ function InfixToPostfixVisualizer() {
   );
 }
 
-export default InfixToPostfixVisualizer;
+export default InfixToPrefixVisualizer;

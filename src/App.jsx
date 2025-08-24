@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import InfixToPostfixVisualizer from './components/InfixToPostfixVisualizer';
+import InfixToPrefixVisualizer from './components/InfixToPrefixVisualizer';
+import PostfixEvaluationVisualizer from './components/PostfixEvaluationVisualizer';
+import PrefixEvaluationVisualizer from './components/PrefixEvaluationVisualizer';
 import { Sun, Moon } from 'lucide-react';
 import './App.css';
 
 function App() {
   const [selectedVisualizer, setSelectedVisualizer] = useState('infixToPostfix');
-  // CHANGED: Default theme is now 'light'
   const [theme, setTheme] = useState('light');
 
-  // Effect to update the body class when the theme changes
   useEffect(() => {
     document.body.className = '';
     document.body.classList.add(theme);
@@ -22,6 +23,19 @@ function App() {
     infixToPostfix: {
       name: 'Infix to Postfix Conversion',
       component: <InfixToPostfixVisualizer />,
+    },
+    infixToPrefix: {
+      name: 'Infix to Prefix Conversion',
+      component: <InfixToPrefixVisualizer />,
+    },
+    postfixEvaluation: {
+      name: 'Evaluation of Postfix Expression',
+      component: <PostfixEvaluationVisualizer />,
+    },
+    prefixEvaluation: {
+      // ===== CORRECTED: The name and component had typos =====
+      name: 'Evaluation of Prefix Expression',
+      component: <PrefixEvaluationVisualizer />,
     },
   };
 
@@ -42,7 +56,6 @@ function App() {
               ))}
             </select>
           </div>
-          {/* ADDED: New container for the theme toggle for better layout and clarity */}
           <div className="theme-toggle-container">
             <label htmlFor="theme-toggle-btn">Toggle Theme</label>
             <button id="theme-toggle-btn" onClick={toggleTheme} className="theme-toggle">

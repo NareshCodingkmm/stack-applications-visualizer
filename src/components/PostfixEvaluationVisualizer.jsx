@@ -1,0 +1,279 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Play, Pause, RotateCcw, SkipBack, SkipForward, Binary } from 'lucide-react';
+import './InfixToPostfixVisualizer.css'; 
+
+const isOperator = (token) => ['+', '-', '*', '/', '^'].includes(token);
+
+// Algorithm steps for Postfix Evaluation
+const algorithmRules = [
+  { text: "Create an empty stack. Start reading symbols one by one from left to right." },
+  { text: "If the symbol is an operand, push it onto the stack." },
+  { 
+    text: "If the symbol is an operator:",
+    subSteps: [
+      { text: "Perform the pop operation twice to get operand1 and operand2 respectively." },
+      { text: "Perform the calculation: result = operand1 (operator) operand2" },
+      { text: "Push the result back onto the stack." }
+    ]
+  },
+  { text: "After processing all the symbols, the value remaining in the stack is the final answer." }
+];
+
+// More robust validation for Postfix expression
+const validatePostfix = (expression, tokens) => {
+    const cleanedInfix = expression.replace(/\s+/g, '');
+    const rejoinedTokens = tokens ? tokens.join('') : '';
+    if (cleanedInfix !== rejoinedTokens) {
+        return `Invalid characters found. Please use numbers and operators only.`;
+    }
+
+    let count = 0;
+    for (const token of tokens) {
+        if (!isNaN(parseFloat(token))) {
+            count++;
+        } else if (isOperator(token)) {
+            if (count < 2) return "Invalid Postfix Expression: Not enough operands for an operator.";
+            count--;
+        }
+    }
+    if (count !== 1) return "Invalid Postfix Expression: The final count of operands is not one.";
+    return null;
+};
+
+
+function AlgorithmRule({ rule, path, highlightedPath }) {
+  const isHighlighted = highlightedPath && JSON.stringify(path) === JSON.stringify(highlightedPath.slice(0, path.length));
+  return (
+    <li>
+      <span className={isHighlighted ? 'highlighted-text' : ''}>{rule.text}</span>
+      {rule.subSteps && (
+        <ol className="sub-steps">
+          {rule.subSteps.map((subRule, index) => (
+            <AlgorithmRule key={index} rule={subRule} path={[...path, index]} highlightedPath={highlightedPath} />
+          ))}
+        </ol>
+      )}
+    </li>
+  );
+}
+
+
+function PostfixEvaluationVisualizer() {
+  const [postfix, setPostfix] = useState('2 4 6 + * 10 5 / -');
+  const [steps, setSteps] = useState([]);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speed, setSpeed] = useState(1000);
+  const [error, setError] = useState(null);
+  const [expressionTokens, setExpressionTokens] = useState([]);
+  const intervalRef = useRef(null);
+  const logContainerRef = useRef(null);
+
+  useEffect(() => {
+    if (isPlaying) {
+      intervalRef.current = setInterval(() => {
+        setCurrentStep(prev => {
+          if (prev < steps.length - 1) { return prev + 1; }
+          setIsPlaying(false); clearInterval(intervalRef.current); return prev;
+        });
+      }, speed);
+    } else { clearInterval(intervalRef.current); }
+    return () => clearInterval(intervalRef.current);
+  }, [isPlaying, steps.length, speed]);
+
+  useEffect(() => {
+    if (logContainerRef.current) {
+        const element = logContainerRef.current;
+        element.scrollTop = element.scrollHeight;
+    }
+  }, [currentStep]);
+
+
+  const generateSteps = () => {
+    setError(null);
+    setSteps([]);
+    setCurrentStep(0);
+    
+    const tokens = postfix.match(/\d+(\.\d+)?|[+\-*/^]/g) || [];
+    setExpressionTokens(tokens);
+
+    if (postfix.trim() === '') {
+        setError("Expression cannot be empty.");
+        return;
+    }
+    
+    const validationError = validatePostfix(postfix, tokens);
+    if (validationError) {
+        setError(validationError);
+        return;
+    }
+
+    const newSteps = [];
+    let stack = [];
+    
+    newSteps.push({
+      token: null, stack: [], explanation: 'Algorithm starts. Reading postfix expression.',
+      highlightedRulePath: [0], tokenIndex: -1,
+    });
+
+    for (const [tokenIndex, token] of tokens.entries()) {
+      if (!isNaN(parseFloat(token))) {
+        stack.push(parseFloat(token));
+        newSteps.push({ 
+            token, 
+            stack: [...stack], 
+            tokenIndex,
+            explanation: `Symbol is an operand ('${token}'). Push it onto the stack.`,
+            highlightedRulePath: [1]
+        });
+      } else if (isOperator(token)) {
+        if (stack.length < 2) {
+            setError("Invalid Postfix Expression: Not enough operands for operator.");
+            return;
+        }
+
+        // ===== UPDATED: Operator logic is now broken into three distinct steps =====
+
+        // Step 1: Pop
+        const operand2 = stack.pop();
+        const operand1 = stack.pop();
+        newSteps.push({
+            token,
+            stack: [...stack],
+            tokenIndex,
+            explanation: `Symbol is an operator ('${token}'). Pop operand2 ('${operand2}') and operand1 ('${operand1}') from the stack.`,
+            highlightedRulePath: [2, 0]
+        });
+
+        // Step 2: Calculate
+        let result;
+        switch (token) {
+            case '+': result = operand1 + operand2; break;
+            case '-': result = operand1 - operand2; break;
+            case '*': result = operand1 * operand2; break;
+            case '/':
+                if (operand2 === 0) {
+                    setError("Error: Cannot divide by zero.");
+                    return;
+                }
+                result = operand1 / operand2; 
+                break;
+            case '^': result = Math.pow(operand1, operand2); break;
+            default: break;
+        }
+        newSteps.push({
+            token,
+            stack: [...stack],
+            tokenIndex,
+            explanation: `Perform the calculation: ${operand1} ${token} ${operand2} = ${result}.`,
+            highlightedRulePath: [2, 1]
+        });
+        
+        // Step 3: Push
+        stack.push(result);
+        newSteps.push({
+            token,
+            stack: [...stack],
+            tokenIndex,
+            explanation: `Push the result ('${result}') back onto the stack.`,
+            highlightedRulePath: [2, 2]
+        });
+      }
+    }
+    
+    newSteps.push({
+      token: null, stack: [...stack], 
+      explanation: `After processing all symbols, the final answer is ${stack[0]}.`,
+      highlightedRulePath: [3],
+      tokenIndex: -1,
+    });
+    setSteps(newSteps);
+  };
+  
+  const handleReset = () => { setIsPlaying(false); setCurrentStep(0); setSteps([]); setError(null); setExpressionTokens([]); };
+  const handlePlayPause = () => { if (steps.length === 0) generateSteps(); else setIsPlaying(!isPlaying); };
+  const handleNext = () => currentStep < steps.length - 1 && setCurrentStep(currentStep + 1);
+  const handlePrev = () => currentStep > 0 && setCurrentStep(currentStep - 1);
+  const currentData = steps[currentStep] || { stack: [], explanation: 'Enter a postfix expression and click Evaluate.', token: null, highlightedRulePath: null, tokenIndex: -1 };
+  const stack = currentData.stack;
+
+  return (
+    <div className="visualizer-container">
+      <div className="controls">
+        <div className="input-group">
+            <label htmlFor="postfix-input">Postfix Expression:</label>
+            <input id="postfix-input" type="text" value={postfix} onChange={(e) => { setPostfix(e.target.value); setError(null); }} />
+            <small className="input-note">Note: Please enter spaces between each number and operator.</small>
+        </div>
+        <button onClick={generateSteps}><Binary size={18}/> Evaluate</button>
+        <button onClick={handleReset} className="clear-button"><RotateCcw size={18}/> Clear</button>
+        <div className="navigation-controls">
+          <button onClick={handlePrev} disabled={currentStep === 0}><SkipBack size={20}/></button>
+          <button onClick={handlePlayPause} disabled={steps.length > 0 && currentStep === steps.length - 1}>{isPlaying ? <Pause size={20}/> : <Play size={20}/>}</button>
+          <button onClick={handleNext} disabled={currentStep >= steps.length - 1}><SkipForward size={20}/></button>
+        </div>
+      </div>
+      
+      {error && <div className="error-message">{error}</div>}
+
+      {steps.length > 0 && !error && (
+          <div className="expression-display">
+              <div className="given-expression">
+                <strong>Processing:</strong>
+                <div className="expression-string">
+                  {expressionTokens.map((t, index) => (
+                    <span key={index} className={index === currentData.tokenIndex ? 'highlight-token' : 'token'}>
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+          </div>
+      )}
+
+      <div className="main-content-area">
+        <div className="panels-container">
+          <div className="panel algorithm-panel"><h3>Algorithm Steps</h3><ol>{algorithmRules.map((rule, index) => (<AlgorithmRule key={index} rule={rule} path={[index]} highlightedPath={currentData.highlightedRulePath} />))}</ol></div>
+          <div className="panel explanation-panel"><h3>Explanation</h3><p>{currentData.explanation}</p></div>
+          <div className="panel visualization-panel">
+            <h3>Visualization</h3>
+            <div className="stack-container">
+              <h3>Operand Stack</h3>
+              <div className="stack-visual-wrapper">
+                <div className="stack-indices">{stack.map((_, index) => <div key={index} className="stack-index">{index}</div>)}</div>
+                <div className="stack-visual">{stack.map((item, index) => <div key={index} className="stack-element">{Number.isInteger(item) ? item : item.toFixed(2)}</div>)}</div>
+                {stack.length > 0 && <div className="stack-top-pointer" style={{ bottom: `${(stack.length-1) * 44 + 22}px`}}>TOP</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="panel output-panel">
+            <h3>Final Answer</h3>
+            <div className="output-visual">
+              {currentStep === steps.length - 1 ? (Number.isInteger(steps[steps.length - 1].stack[0]) ? steps[steps.length - 1].stack[0] : steps[steps.length - 1].stack[0].toFixed(2)) : ''}
+            </div>
+        </div>
+        
+        {steps.length > 1 && !error && (
+            <div className="panel log-panel">
+                <h3>Operations Log</h3>
+                <div className="log-container" ref={logContainerRef}>
+                    <div className="log-entry log-input"><strong>Input Expression:</strong><span>{postfix}</span></div>
+                    {steps.slice(1, currentStep + 1).map((step, index) => (
+                       step.token && 
+                        <div key={index} className="log-entry">
+                            <span className="log-step-number">{index + 1}.</span> {step.explanation}
+                        </div>
+                    ))}
+                    {currentStep === steps.length - 1 && (
+                         <div className="log-entry log-output"><strong>Final Answer:</strong><span>{Number.isInteger(steps[steps.length - 1].stack[0]) ? steps[steps.length - 1].stack[0] : steps[steps.length - 1].stack[0].toFixed(2)}</span></div>
+                    )}
+                </div>
+            </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default PostfixEvaluationVisualizer;
