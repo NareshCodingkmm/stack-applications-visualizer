@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, SkipBack, SkipForward, Binary, Download } from 'lucide-react';
+import { BlobProvider } from '@react-pdf/renderer';
+import LogPDF from './LogPDF';
 import './InfixToPostfixVisualizer.css'; 
 
 const isOperator = (token) => ['+', '-', '*', '/', '^'].includes(token);
 
-// Algorithm steps for Postfix Evaluation
 const algorithmRules = [
   { text: "Create an empty stack. Start reading symbols one by one from left to right." },
   { text: "If the symbol is an operand, push it onto the stack." },
   { 
     text: "If the symbol is an operator:",
     subSteps: [
-      { text: "Perform the pop operation twice to get operand1 and operand2 respectively." },
+      { text: "Perform the pop operation twice to get operand2 and operand1 respectively." },
       { text: "Perform the calculation: result = operand1 (operator) operand2" },
       { text: "Push the result back onto the stack." }
     ]
@@ -19,7 +20,6 @@ const algorithmRules = [
   { text: "After processing all the symbols, the value remaining in the stack is the final answer." }
 ];
 
-// More robust validation for Postfix expression
 const validatePostfix = (expression, tokens) => {
     const cleanedInfix = expression.replace(/\s+/g, '');
     const rejoinedTokens = tokens ? tokens.join('') : '';
@@ -132,9 +132,6 @@ function PostfixEvaluationVisualizer() {
             return;
         }
 
-        // ===== UPDATED: Operator logic is now broken into three distinct steps =====
-
-        // Step 1: Pop
         const operand2 = stack.pop();
         const operand1 = stack.pop();
         newSteps.push({
@@ -145,7 +142,6 @@ function PostfixEvaluationVisualizer() {
             highlightedRulePath: [2, 0]
         });
 
-        // Step 2: Calculate
         let result;
         switch (token) {
             case '+': result = operand1 + operand2; break;
@@ -169,7 +165,6 @@ function PostfixEvaluationVisualizer() {
             highlightedRulePath: [2, 1]
         });
         
-        // Step 3: Push
         stack.push(result);
         newSteps.push({
             token,
@@ -190,40 +185,21 @@ function PostfixEvaluationVisualizer() {
     setSteps(newSteps);
   };
   
-  const handleSaveLog = () => {
-    if (steps.length < 2) return;
-
-    const finalStep = steps[steps.length - 1];
-    let logContent = `Input Expression: ${postfix}\n\n`;
-    logContent += "--- Operations Log ---\n";
-
-    steps.slice(1, steps.length - 1).forEach((step, index) => {
-        logContent += `${index + 1}. ${step.explanation}\n`;
-    });
-    
-    const finalResultValue = finalStep.stack[0];
-    const formattedResult = Number.isInteger(finalResultValue) ? finalResultValue : finalResultValue.toFixed(2);
-    
-    logContent += `\n${finalStep.explanation.replace(finalResultValue, formattedResult)}\n\n`;
-    logContent += "--- Final Result ---\n";
-    logContent += `Final Answer: ${formattedResult}\n`;
-
-    const blob = new Blob([logContent], { type: 'text/plain;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'postfix-evaluation-log.txt';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
-  };
-
   const handleReset = () => { setIsPlaying(false); setCurrentStep(0); setSteps([]); setError(null); setExpressionTokens([]); };
   const handlePlayPause = () => { if (steps.length === 0) generateSteps(); else setIsPlaying(!isPlaying); };
   const handleNext = () => currentStep < steps.length - 1 && setCurrentStep(currentStep + 1);
   const handlePrev = () => currentStep > 0 && setCurrentStep(currentStep - 1);
   const currentData = steps[currentStep] || { stack: [], explanation: 'Enter a postfix expression and click Evaluate.', token: null, highlightedRulePath: null, tokenIndex: -1 };
   const stack = currentData.stack;
+
+  const getFinalResult = () => {
+    if (steps.length > 1) {
+        const finalValue = steps[steps.length - 1].stack[0];
+        const formattedResult = Number.isInteger(finalValue) ? finalValue : finalValue.toFixed(2);
+        return `Final Answer: ${formattedResult}`;
+    }
+    return '';
+  };
 
   return (
     <div className="visualizer-container">
@@ -278,7 +254,7 @@ function PostfixEvaluationVisualizer() {
         <div className="panel output-panel">
             <h3>Final Answer</h3>
             <div className="output-visual">
-              {currentStep === steps.length - 1 ? (Number.isInteger(steps[steps.length - 1].stack[0]) ? steps[steps.length - 1].stack[0] : steps[steps.length - 1].stack[0].toFixed(2)) : ''}
+              {currentStep === steps.length - 1 ? (getFinalResult().replace('Final Answer: ', '')) : ''}
             </div>
         </div>
         
@@ -287,10 +263,26 @@ function PostfixEvaluationVisualizer() {
                 <h3>
                   Operations Log
                   {currentStep === steps.length - 1 && (
-                    <button onClick={handleSaveLog} className="save-log-button">
-                        <Download size={14} style={{ marginRight: '8px' }}/>
-                        Save Log
-                    </button>
+                    <BlobProvider
+                      document={
+                        <LogPDF
+                          initialExpression={postfix}
+                          logSteps={steps.slice(1).map((step, index) => `${index + 1}. ${step.explanation}`)}
+                          finalResult={getFinalResult()}
+                        />
+                      }
+                    >
+                      {({ url, loading }) =>
+                        loading ? (
+                          <button className="save-log-button">Generating PDF...</button>
+                        ) : (
+                          <a href={url} download="postfix-evaluation-log.pdf" className="save-log-button" style={{textDecoration: 'none'}}>
+                            <Download size={14} style={{ marginRight: '8px' }}/>
+                            Save Log as PDF
+                          </a>
+                        )
+                      }
+                    </BlobProvider>
                   )}
                 </h3>
                 <div className="log-container" ref={logContainerRef}>
@@ -302,7 +294,7 @@ function PostfixEvaluationVisualizer() {
                         </div>
                     ))}
                     {currentStep === steps.length - 1 && (
-                         <div className="log-entry log-output"><strong>Final Answer:</strong><span>{Number.isInteger(steps[steps.length - 1].stack[0]) ? steps[steps.length - 1].stack[0] : steps[steps.length - 1].stack[0].toFixed(2)}</span></div>
+                         <div className="log-entry log-output"><strong>Final Answer:</strong><span>{getFinalResult().replace('Final Answer: ', '')}</span></div>
                     )}
                 </div>
             </div>

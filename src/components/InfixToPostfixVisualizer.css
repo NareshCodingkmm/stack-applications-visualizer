@@ -429,7 +429,7 @@
         align-items: stretch;
     }
     .algorithm-panel, .explanation-panel, .visualization-panel {
-        flex: 1; 
+        flex: 1;
         min-height: auto;
     }
     .visualization-panel {
@@ -440,7 +440,7 @@
 @media (max-width: 768px) {
     .visualizer-container {
         padding: 1rem;
-        min-width: 100%; 
+        min-width: 100%;
     }
     .controls {
         flex-direction: column;

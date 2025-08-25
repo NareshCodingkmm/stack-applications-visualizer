@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, SkipBack, SkipForward, Binary, Download } from 'lucide-react';
+import { BlobProvider } from '@react-pdf/renderer';
+import LogPDF from './LogPDF';
 import './InfixToPostfixVisualizer.css'; 
 
-// Helper function to define operator precedence
 const precedence = (op) => {
   switch (op) {
     case '+': case '-': return 1;
@@ -15,7 +16,6 @@ const precedence = (op) => {
 const isOperator = (token) => ['+', '-', '*', '/', '^'].includes(token);
 const isOperand = (token) => !isOperator(token) && token !== '(' && token !== ')';
 
-// Algorithm steps with the final corrected wording
 const algorithmRules = [
   { text: "Create an empty stack." },
   { text: "Reverse the given infix expression, then read all the symbols from left to right." },
@@ -45,7 +45,6 @@ const algorithmRules = [
   { text: "After processing all symbols, pop all the remaining operators from stack and prefix them to output." }
 ];
 
-// Comprehensive validation function
 const validateExpression = (infix, tokens) => {
     const cleanedInfix = infix.replace(/\s+/g, '');
     const rejoinedTokens = tokens ? tokens.join('') : '';
@@ -66,7 +65,6 @@ const validateExpression = (infix, tokens) => {
     return null;
 };
 
-// Recursive component to render the nested algorithm rules
 function AlgorithmRule({ rule, path, highlightedPath }) {
   const isHighlighted = highlightedPath && JSON.stringify(path) === JSON.stringify(highlightedPath.slice(0, path.length));
   return (
@@ -120,21 +118,16 @@ function InfixToPrefixVisualizer() {
     setSteps([]);
     setCurrentStep(0);
     
-    // ===== UPDATED: Fixed the reversal logic =====
-    // 1. Tokenize the original expression first to handle multi-digit/char operands correctly.
     const originalTokens = infix.match(/\d+(\.\d+)?|[A-Za-z_][A-Za-z0-9_]*|[+\-*/^()]/g) || [];
     
-    // 2. Validate the original, un-reversed expression.
     const validationError = validateExpression(infix, originalTokens);
     if (validationError) {
         setError(validationError);
         return;
     }
 
-    // 3. Reverse the array of tokens. This is the correct way to reverse for processing.
     const tokens = [...originalTokens].reverse();
     setExpressionTokens(tokens);
-    // ===== END OF FIX =====
 
     const newSteps = [];
     let stack = [];
@@ -148,20 +141,21 @@ function InfixToPrefixVisualizer() {
 
     tokens.forEach((token, tokenIndex) => {
       let step = { token, stack: [...stack], prefix, animatePrefix: false, tokenIndex };
+      let explanationText = "";
 
       if (isOperand(token)) {
         prefix = token + (prefix ? ' ' : '') + prefix;
         step.prefix = prefix;
-        step.explanation = `Token is an operand ('${token}'). Prefix it to output.`;
+        explanationText = `Token is an operand ('${token}'). Prefix it to output.`;
         step.highlightedRulePath = [2];
         step.animatePrefix = true;
       } else if (token === ')') {
         stack.push(token);
         step.stack = [...stack];
-        step.explanation = `Token is a right parenthesis (')'). Push it onto stack.`;
+        explanationText = `Token is a right parenthesis (')'). Push it onto stack.`;
         step.highlightedRulePath = [3];
       } else if (token === '(') {
-        step.explanation = `Token is a left parenthesis ('('). Pop content from stack and prefix to output until a ')' is found.`;
+        explanationText = `Token is a left parenthesis ('('). Pop content from stack and prefix to output until a ')' is found.`;
         while (stack.length > 0 && stack[stack.length - 1] !== ')') {
             prefix = stack.pop() + (prefix ? ' ' : '') + prefix;
         }
@@ -170,43 +164,44 @@ function InfixToPrefixVisualizer() {
         } else { 
             setError("Mismatched parentheses."); return; 
         }
-        step.explanation += " Then, pop the right parenthesis from the stack, but do not prefix it to output.";
+        explanationText += " Then, pop the right parenthesis from the stack, but do not prefix it to output.";
         step.stack = [...stack];
         step.prefix = prefix;
         step.highlightedRulePath = [4, 0, 1];
         step.animatePrefix = true;
       } else if (isOperator(token)) {
-        step.explanation = `Token is an operator ('${token}'). `;
+        explanationText = `Token is an operator ('${token}'). `;
         const top = stack.length > 0 ? stack[stack.length - 1] : null;
         if (!top) {
             step.highlightedRulePath = [5, 0];
-            step.explanation += `The stack is empty, so push the current operator onto the stack.`;
+            explanationText += `The stack is empty, so push the current operator onto the stack.`;
             stack.push(token);
         } else if (top === ')') {
             step.highlightedRulePath = [5, 1, 0];
-            step.explanation += `The top of the stack is a right parenthesis, so push the current operator onto the stack.`;
+            explanationText += `The top of the stack is a right parenthesis, so push the current operator onto the stack.`;
             stack.push(token);
         } else if (precedence(token) > precedence(top)) {
             step.highlightedRulePath = [5, 1, 2];
-            step.explanation += `The top of the stack ('${top}') has lower precedence than '${token}', so push '${token}' onto the stack.`
+            explanationText += `The top of the stack ('${top}') has lower precedence than '${token}', so push '${token}' onto the stack.`
             stack.push(token);
         } else {
             step.highlightedRulePath = [5, 1, 1];
             if (precedence(token) < precedence(top)) {
-                step.explanation += `The top of the stack ('${top}') has higher precedence than '${token}', so pop all such operators from the stack and prefix to output. `;
+                explanationText += `The top of the stack ('${top}') has higher precedence than '${token}', so pop all such operators from the stack and prefix to output. `;
             } else { // equal precedence
-                step.explanation += `The top of the stack ('${top}') has equal precedence to '${token}', so pop all such operators from the stack and prefix to output. `;
+                explanationText += `The top of the stack ('${top}') has equal precedence to '${token}', so pop all such operators from the stack and prefix to output. `;
             }
-            while (stack.length > 0 && stack[stack.length - 1] !== ')' && precedence(token) < precedence(stack[stack.length-1])) {
+            while (stack.length > 0 && stack[stack.length - 1] !== ')' && precedence(token) <= precedence(stack[stack.length-1])) {
                 prefix = stack.pop() + (prefix ? ' ' : '') + prefix;
             }
             stack.push(token);
-            step.explanation += `After that, push the current operator '${token}' onto the stack.`
+            explanationText += `After that, push the current operator '${token}' onto the stack.`
             step.animatePrefix = true;
         }
         step.stack = [...stack];
         step.prefix = prefix;
       }
+      step.explanation = explanationText;
       newSteps.push(step);
     });
     
@@ -228,31 +223,6 @@ function InfixToPrefixVisualizer() {
     });
     setSteps(newSteps);
   };
-
-  const handleSaveLog = () => {
-    if (steps.length < 2) return;
-
-    const finalStep = steps[steps.length - 1];
-    let logContent = `Input Expression: ${infix}\n\n`;
-    logContent += "--- Operations Log ---\n";
-
-    steps.slice(1, steps.length - 1).forEach((step, index) => {
-        logContent += `${index + 1}. ${step.explanation}\n`;
-    });
-    
-    logContent += `\n${finalStep.explanation}\n\n`;
-    logContent += "--- Final Result ---\n";
-    logContent += `Final Prefix: ${finalStep.prefix}\n`;
-
-    const blob = new Blob([logContent], { type: 'text/plain;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'infix-to-prefix-log.txt';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
-  };
   
   const handleReset = () => { setIsPlaying(false); setCurrentStep(0); setSteps([]); setError(null); setExpressionTokens([]); };
   const handlePlayPause = () => { if (steps.length === 0) generateSteps(); else setIsPlaying(!isPlaying); };
@@ -260,6 +230,8 @@ function InfixToPrefixVisualizer() {
   const handlePrev = () => currentStep > 0 && setCurrentStep(currentStep - 1);
   const currentData = steps[currentStep] || { stack: [], prefix: '', explanation: 'Enter an infix expression and click Start.', token: null, highlightedRulePath: null, animatePrefix: false, tokenIndex: -1 };
   const stack = currentData.stack;
+
+  const cleanInfix = infix.replace(/\$/g, '');
 
   return (
     <div className="visualizer-container">
@@ -324,10 +296,26 @@ function InfixToPrefixVisualizer() {
                 <h3>
                   Operations Log
                   {currentStep === steps.length - 1 && (
-                    <button onClick={handleSaveLog} className="save-log-button">
-                        <Download size={14} style={{ marginRight: '8px' }}/>
-                        Save Log
-                    </button>
+                    <BlobProvider
+                      document={
+                        <LogPDF
+                          initialExpression={cleanInfix}
+                          logSteps={steps.slice(1).map((step, index) => `${index + 1}. ${step.explanation}`)}
+                          finalResult={`Final Prefix: ${steps[steps.length - 1].prefix}`}
+                        />
+                      }
+                    >
+                      {({ url, loading }) =>
+                        loading ? (
+                          <button className="save-log-button">Generating PDF...</button>
+                        ) : (
+                          <a href={url} download="infix-to-prefix-log.pdf" className="save-log-button" style={{textDecoration: 'none'}}>
+                            <Download size={14} style={{ marginRight: '8px' }}/>
+                            Save Log as PDF
+                          </a>
+                        )
+                      }
+                    </BlobProvider>
                   )}
                 </h3>
                 <div className="log-container" ref={logContainerRef}>
