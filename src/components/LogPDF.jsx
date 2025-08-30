@@ -94,11 +94,11 @@ const styles = StyleSheet.create({
   },
   stackStateBox: {
     padding: 6,
-    width: '25%',
+    width: '15%',
   },
   outputStateBox: {
     padding: 6,
-    width: '75%',
+    width: '85%',
   },
   stateLabel: {
     fontSize: 10,
