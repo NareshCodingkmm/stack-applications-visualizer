@@ -12,8 +12,8 @@ const algorithmRules = [
   { 
     text: "If the symbol is an operator:",
     subSteps: [
-      { text: "Perform the pop operation twice to get operand2 and operand1 respectively." },
-      { text: "Perform the calculation: result = operand1 (operator) operand2" },
+      { text: "Perform the pop operation twice to get operand-1 and operand-2 respectively." },
+      { text: "Perform the calculation: result = operand-2 (operator) operand-1" },
       { text: "Push the result back onto the stack." }
     ]
   },
@@ -131,14 +131,14 @@ function PostfixEvaluationVisualizer() {
             setError("Invalid Postfix Expression: Not enough operands for operator.");
             return;
         }
-
+        
         const operand2 = stack.pop();
         const operand1 = stack.pop();
         newSteps.push({
             token,
             stack: [...stack],
             tokenIndex,
-            explanation: `Symbol is an operator ('${token}'). Pop operand2 ('${operand2}') and operand1 ('${operand1}') from the stack.`,
+            explanation: `Symbol is an operator ('${token}'), so perform pop operation twice. Popped operands are - Operand-1 (top): ${operand2}, Operand-2: ${operand1}.`,
             highlightedRulePath: [2, 0]
         });
 
@@ -157,12 +157,14 @@ function PostfixEvaluationVisualizer() {
             case '^': result = Math.pow(operand1, operand2); break;
             default: break;
         }
+        
         newSteps.push({
             token,
             stack: [...stack],
             tokenIndex,
-            explanation: `Perform the calculation: ${operand1} ${token} ${operand2} = ${result}.`,
-            highlightedRulePath: [2, 1]
+            explanation: `Performing operation {operand-2 ${token} operand-1} => ${operand1} ${token} ${operand2} = ${result}.`,
+            highlightedRulePath: [2, 1],
+            isSubStep: true // Mark as a sub-step
         });
         
         stack.push(result);
@@ -171,7 +173,8 @@ function PostfixEvaluationVisualizer() {
             stack: [...stack],
             tokenIndex,
             explanation: `Push the result ('${result}') back onto the stack.`,
-            highlightedRulePath: [2, 2]
+            highlightedRulePath: [2, 2],
+            isSubStep: true // Mark as a sub-step
         });
       }
     }
@@ -202,104 +205,111 @@ function PostfixEvaluationVisualizer() {
   };
 
   return (
-    <div className="visualizer-container">
-      <div className="controls">
-        <div className="input-group">
-            <label htmlFor="postfix-input">Postfix Expression:</label>
-            <input id="postfix-input" type="text" value={postfix} onChange={(e) => { setPostfix(e.target.value); setError(null); }} />
-            <small className="input-note">Note: Please enter spaces between each number and operator.</small>
-        </div>
-        <button onClick={generateSteps}><Binary size={18}/> Evaluate</button>
-        <button onClick={handleReset} className="clear-button"><RotateCcw size={18}/> Clear</button>
-        <div className="navigation-controls">
-          <button onClick={handlePrev} disabled={currentStep === 0}><SkipBack size={20}/></button>
-          <button onClick={handlePlayPause} disabled={steps.length > 0 && currentStep === steps.length - 1}>{isPlaying ? <Pause size={20}/> : <Play size={20}/>}</button>
-          <button onClick={handleNext} disabled={currentStep >= steps.length - 1}><SkipForward size={20}/></button>
-        </div>
-      </div>
-      
-      {error && <div className="error-message">{error}</div>}
-
-      {steps.length > 0 && !error && (
-          <div className="expression-display">
-              <div className="given-expression">
-                <strong>Processing:</strong>
-                <div className="expression-string">
-                  {expressionTokens.map((t, index) => (
-                    <span key={index} className={index === currentData.tokenIndex ? 'highlight-token' : 'token'}>
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
+    <div className="app-container">
+      <div className="visualizer-container">
+        <div className="controls">
+          <div className="input-group">
+              <label htmlFor="postfix-input">Postfix Expression:</label>
+              <input id="postfix-input" type="text" value={postfix} onChange={(e) => { setPostfix(e.target.value); setError(null); }} />
+              <small className="input-note">Note: Please enter spaces between each number and operator.</small>
           </div>
-      )}
-
-      <div className="main-content-area">
-        <div className="panels-container">
-          <div className="panel algorithm-panel"><h3>Algorithm Steps</h3><ol>{algorithmRules.map((rule, index) => (<AlgorithmRule key={index} rule={rule} path={[index]} highlightedPath={currentData.highlightedRulePath} />))}</ol></div>
-          <div className="panel explanation-panel"><h3>Explanation</h3><p>{currentData.explanation}</p></div>
-          <div className="panel visualization-panel">
-            <h3>Visualization</h3>
-            <div className="stack-container">
-              <h3>Operand Stack</h3>
-              <div className="stack-visual-wrapper">
-                <div className="stack-indices">{stack.map((_, index) => <div key={index} className="stack-index">{index}</div>)}</div>
-                <div className="stack-visual">{stack.map((item, index) => <div key={index} className="stack-element">{Number.isInteger(item) ? item : item.toFixed(2)}</div>)}</div>
-                {stack.length > 0 && <div className="stack-top-pointer" style={{ bottom: `${(stack.length-1) * 44 + 22}px`}}>TOP</div>}
-              </div>
-            </div>
+          <button onClick={generateSteps}><Binary size={18}/> Evaluate</button>
+          <button onClick={handleReset} className="clear-button"><RotateCcw size={18}/> Clear</button>
+          <div className="navigation-controls">
+            <button onClick={handlePrev} disabled={currentStep === 0}><SkipBack size={20}/></button>
+            <button onClick={handlePlayPause} disabled={steps.length > 0 && currentStep === steps.length - 1}>{isPlaying ? <Pause size={20}/> : <Play size={20}/>}</button>
+            <button onClick={handleNext} disabled={currentStep >= steps.length - 1}><SkipForward size={20}/></button>
           </div>
-        </div>
-        <div className="panel output-panel">
-            <h3>Final Answer</h3>
-            <div className="output-visual">
-              {currentStep === steps.length - 1 ? (getFinalResult().replace('Final Answer: ', '')) : ''}
-            </div>
         </div>
         
-        {steps.length > 1 && !error && (
-            <div className="panel log-panel">
-                <h3>
-                  Operations Log
-                  {currentStep === steps.length - 1 && (
-                    <BlobProvider
-                      document={
-                        <LogPDF
-                          initialExpression={postfix}
-                          logSteps={steps.slice(1).map((step, index) => `${index + 1}. ${step.explanation}`)}
-                          finalResult={getFinalResult()}
-                        />
-                      }
-                    >
-                      {({ url, loading }) =>
-                        loading ? (
-                          <button className="save-log-button">Generating PDF...</button>
-                        ) : (
-                          <a href={url} download="postfix-evaluation-log.pdf" className="save-log-button" style={{textDecoration: 'none'}}>
-                            <Download size={14} style={{ marginRight: '8px' }}/>
-                            Save Log as PDF
-                          </a>
-                        )
-                      }
-                    </BlobProvider>
-                  )}
-                </h3>
-                <div className="log-container" ref={logContainerRef}>
-                    <div className="log-entry log-input"><strong>Input Expression:</strong><span>{postfix}</span></div>
-                    {steps.slice(1, currentStep + 1).map((step, index) => (
-                       step.token && 
-                        <div key={index} className="log-entry">
-                            <span className="log-step-number">{index + 1}.</span> {step.explanation}
-                        </div>
+        {error && <div className="error-message">{error}</div>}
+
+        {steps.length > 0 && !error && (
+            <div className="expression-display">
+                <div className="given-expression">
+                  <strong>Processing:</strong>
+                  <div className="expression-string">
+                    {expressionTokens.map((t, index) => (
+                      <span key={index} className={index === currentData.tokenIndex ? 'highlight-token' : 'token'}>
+                        {t}
+                      </span>
                     ))}
-                    {currentStep === steps.length - 1 && (
-                         <div className="log-entry log-output"><strong>Final Answer:</strong><span>{getFinalResult().replace('Final Answer: ', '')}</span></div>
-                    )}
+                  </div>
                 </div>
             </div>
         )}
+
+        <div className="main-content-area">
+          <div className="panels-container">
+            <div className="panel algorithm-panel"><h3>Algorithm Steps</h3><ol>{algorithmRules.map((rule, index) => (<AlgorithmRule key={index} rule={rule} path={[index]} highlightedPath={currentData.highlightedPath} />))}</ol></div>
+            <div className="panel explanation-panel"><h3>Explanation</h3><p>{currentData.explanation}</p></div>
+            <div className="panel visualization-panel">
+              <h3>Visualization</h3>
+              <div className="stack-container">
+                <h3>Operand Stack</h3>
+                <div className="stack-visual-wrapper">
+                  <div className="stack-indices">{stack.map((_, index) => <div key={index} className="stack-index">{index}</div>)}</div>
+                  <div className="stack-visual">{stack.map((item, index) => <div key={index} className="stack-element">{Number.isInteger(item) ? item : item.toFixed(2)}</div>)}</div>
+                  {stack.length > 0 && <div className="stack-top-pointer" style={{ bottom: `${(stack.length-1) * 44 + 22}px`}}>TOP</div>}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="panel output-panel">
+              <h3>Final Answer</h3>
+              <div className="output-visual">
+                {currentStep === steps.length - 1 ? (getFinalResult().replace('Final Answer: ', '')) : ''}
+              </div>
+          </div>
+          
+          {steps.length > 1 && !error && (
+              <div className="panel log-panel">
+                  <h3>
+                    Operations Log
+                    {currentStep === steps.length - 1 && (
+                      <BlobProvider
+                        document={
+                          <LogPDF
+                            title="Postfix Evaluation Log"
+                            type="evaluation"
+                            initialExpression={postfix}
+                            stepsData={steps.slice(1)}
+                            finalResult={getFinalResult()}
+                          />
+                        }
+                      >
+                        {({ url, loading }) =>
+                          loading ? (
+                            <button className="save-log-button">Generating PDF...</button>
+                          ) : (
+                            <a href={url} download="postfix-evaluation-log.pdf" className="save-log-button" style={{textDecoration: 'none'}}>
+                              <Download size={14} style={{ marginRight: '8px' }}/>
+                              Save Log as PDF
+                            </a>
+                          )
+                        }
+                      </BlobProvider>
+                    )}
+                  </h3>
+                  <div className="log-container" ref={logContainerRef}>
+                      <div className="log-entry log-input"><strong>Input Expression:</strong><span>{postfix}</span></div>
+                      {steps.slice(1, currentStep + 1).map((step, index) => (
+                        step.token && 
+                          <div key={index} className="log-entry">
+                              <span className="log-step-number">{index + 1}.</span> {step.explanation}
+                          </div>
+                      ))}
+                      {currentStep === steps.length - 1 && (
+                          <div className="log-entry log-output"><strong>Final Answer:</strong><span>{getFinalResult().replace('Final Answer: ', '')}</span></div>
+                      )}
+                  </div>
+              </div>
+          )}
+        </div>
       </div>
+      <footer className="app-footer">
+        © 2025 Naresh Kumar Siripurapu. All Rights Reserved.
+      </footer>
     </div>
   );
 }

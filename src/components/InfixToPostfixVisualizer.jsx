@@ -46,9 +46,8 @@ const algorithmRules = [
 ];
 
 const validateExpression = (infix, tokens) => {
-    // This validation logic is simplified for brevity but remains the same as your file
     if (!tokens || tokens.length === 0 && infix.trim() !== '') return "Invalid characters.";
-    // ... (rest of your validation logic)
+    // ... (rest of your validation logic from previous versions)
     return null;
 };
 
@@ -130,29 +129,26 @@ function InfixToPostfixVisualizer() {
 
     tokens.forEach((token, tokenIndex) => {
       let step = { token, stack: [...stack], postfix: [...postfix], animatePostfix: false, tokenIndex };
+      let explanationText = "";
       if (isOperand(token)) {
         postfix.push(token);
-        step.postfix = [...postfix];
-        step.explanation = `Token is an operand ('${token}'). Append it to the Postfix Output.`;
+        explanationText = `Token is an operand ('${token}'). Append it to the Postfix Output.`;
         step.highlightedRulePath = [2];
         step.animatePostfix = true;
       } else if (token === '(') {
         stack.push(token);
-        step.stack = [...stack];
-        step.explanation = `Token is a left parenthesis ('('). Push it onto the stack.`;
+        explanationText = `Token is a left parenthesis ('('). Push it onto the stack.`;
         step.highlightedRulePath = [3];
       } else if (token === ')') {
-        step.explanation = `Token is a right parenthesis (')'). Pop operators from the stack and append to the Postfix Output until a left parenthesis is found.`;
+        explanationText = `Token is a right parenthesis (')'). Pop operators from the stack and append to the Postfix Output until a left parenthesis is found.`;
         while (stack.length > 0 && stack[stack.length - 1] !== '(') { postfix.push(stack.pop()); }
         if (stack.length > 0) { stack.pop(); }
         else { setError("Mismatched parentheses."); return; }
-        step.explanation += " Then, pop the left parenthesis from the stack, but do not append it to output.";
-        step.stack = [...stack];
-        step.postfix = [...postfix];
+        explanationText += " Then, pop the left parenthesis from the stack, but do not append it to output.";
         step.highlightedRulePath = [4, 0, 1];
         step.animatePostfix = true;
       } else if (isOperator(token)) {
-        let explanationText = `Token is an operator ('${token}'). `;
+        explanationText = `Token is an operator ('${token}'). `;
         const top = stack.length > 0 ? stack[stack.length - 1] : null;
 
         if (!top) {
@@ -169,7 +165,6 @@ function InfixToPostfixVisualizer() {
             stack.push(token);
         } else {
             step.highlightedRulePath = [5, 1, 1];
-            // ===== BUG FIX: Correctly reference the token in the explanation string =====
             if (precedence(token) < precedence(top)) {
                  explanationText += `The top of the stack ('${top}') has higher precedence than '${token}', so pop all such operators from the stack and append to output. `;
             } else {
@@ -182,10 +177,10 @@ function InfixToPostfixVisualizer() {
             explanationText += `After that, push the current operator '${token}' onto the stack.`
             step.animatePostfix = true;
         }
-        step.explanation = explanationText;
-        step.stack = [...stack];
-        step.postfix = [...postfix];
       }
+      step.explanation = explanationText;
+      step.stack = [...stack];
+      step.postfix = [...postfix];
       newSteps.push(step);
     });
 
@@ -212,112 +207,127 @@ function InfixToPostfixVisualizer() {
   const currentData = steps[currentStep] || { stack: [], postfix: [], explanation: 'Enter an infix expression and click Start.', token: null, highlightedRulePath: null, animatePostfix: false, tokenIndex: -1 };
   const stack = currentData.stack;
 
-  // ===== BUG FIX: Remove stray '$' from expression before passing to PDF =====
   const cleanInfix = infix.replace(/\$/g, '');
 
   return (
-    <div className="visualizer-container">
-       <div className="controls">
-        <label htmlFor="infix-input">Infix Expression:</label>
-        <input id="infix-input" type="text" value={infix} onChange={(e) => { setInfix(e.target.value); setError(null); }} />
-        <button onClick={generateSteps}><Binary size={18}/> Convert</button>
-        <button onClick={handleReset} className="clear-button"><RotateCcw size={18}/> Clear</button>
-        <div className="navigation-controls">
-          <button onClick={handlePrev} disabled={currentStep === 0}><SkipBack size={20}/></button>
-          <button onClick={handlePlayPause} disabled={steps.length > 0 && currentStep === steps.length - 1}>{isPlaying ? <Pause size={20}/> : <Play size={20}/>}</button>
-          <button onClick={handleNext} disabled={currentStep >= steps.length - 1}><SkipForward size={20}/></button>
-        </div>
-      </div>
-      {/* ... (rest of JSX is unchanged) ... */}
-      {error && <div className="error-message">{error}</div>}
-      {steps.length > 0 && !error && (
-          <div className="expression-display">
-              <div className="given-expression">
-                <strong>Processing:</strong>
-                <div className="expression-string">
-                  {expressionTokens.map((t, index) => (
-                    <span key={index} className={index === currentData.tokenIndex ? 'highlight-token' : 'token'}>
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-          </div>
-      )}
-      <div className="main-content-area">
-        <div className="panels-container">
-          <div className="panel algorithm-panel"><h3>Algorithm Steps</h3><ol>{algorithmRules.map((rule, index) => (<AlgorithmRule key={index} rule={rule} path={[index]} highlightedPath={currentData.highlightedRulePath} />))}</ol></div>
-          <div className="panel explanation-panel"><h3>Explanation</h3><p>{currentData.explanation}</p></div>
-          <div className="panel visualization-panel">
-            <h3>Visualization</h3>
-            <div className="stack-container">
-              <h3>Operator Stack</h3>
-              <div className="stack-visual-wrapper">
-                <div className="stack-indices">{stack.map((_, index) => <div key={index} className="stack-index">{index}</div>)}</div>
-                <div className="stack-visual">{stack.map((item, index) => <div key={index} className="stack-element">{item}</div>)}</div>
-                {stack.length > 0 && <div className="stack-top-pointer" style={{ bottom: `${(stack.length-1) * 44 + 22}px`}}>TOP</div>}
-              </div>
-            </div>
+    // ===== THIS IS THE MAIN FIX =====
+    // We wrap everything in a div with the class "app-container".
+    // Your CSS file already knows how to style this container to push the footer down.
+    <div className="app-container">
+      
+      {/* All of your original content goes inside this first div */}
+      <div className="visualizer-container">
+        <div className="controls">
+          <label htmlFor="infix-input">Infix Expression:</label>
+          <input id="infix-input" type="text" value={infix} onChange={(e) => { setInfix(e.target.value); setError(null); }} />
+          <button onClick={generateSteps}><Binary size={18}/> Convert</button>
+          <button onClick={handleReset} className="clear-button"><RotateCcw size={18}/> Clear</button>
+          <div className="navigation-controls">
+            <button onClick={handlePrev} disabled={currentStep === 0}><SkipBack size={20}/></button>
+            <button onClick={handlePlayPause} disabled={steps.length > 0 && currentStep === steps.length - 1}>{isPlaying ? <Pause size={20}/> : <Play size={20}/>}</button>
+            <button onClick={handleNext} disabled={currentStep >= steps.length - 1}><SkipForward size={20}/></button>
           </div>
         </div>
-        <div className="panel output-panel">
-            <h3>Postfix Output</h3>
-            <div className="output-visual">
-              {currentData.postfix.map((item, index) => (
-                <div key={`${index}-${item}`} className={`postfix-element ${index === currentData.postfix.length - 1 && currentData.animatePostfix ? 'animate-add' : ''}`}>
-                  {item}
-                </div>
-              ))}
-            </div>
-        </div>
-        {steps.length > 1 && !error && (
-            <div className="panel log-panel">
-                <h3>
-                  Operations Log
-                  {currentStep === steps.length - 1 && (
-                    <BlobProvider
-                      document={
-                        <LogPDF
-                          initialExpression={cleanInfix}
-                          logSteps={steps.slice(1).map((step, index) => `${index + 1}. ${step.explanation}`)}
-                          finalResult={`Final Postfix: ${steps[steps.length - 1].postfix.join(' ')}`}
-                        />
-                      }
-                    >
-                      {({ url, loading }) =>
-                        loading ? (
-                          <button className="save-log-button">Generating PDF...</button>
-                        ) : (
-                          <a href={url} download="infix-to-postfix-log.pdf" className="save-log-button" style={{textDecoration: 'none'}}>
-                            <Download size={14} style={{ marginRight: '8px' }}/>
-                            Save Log as PDF
-                          </a>
-                        )
-                      }
-                    </BlobProvider>
-                  )}
-                </h3>
-                <div className="log-container" ref={logContainerRef}>
-                    <div className="log-entry log-input">
-                        <strong>Input Expression:</strong>
-                        <span>{infix}</span>
-                    </div>
-                    {steps.slice(1, currentStep + 1).map((step, index) => (
-                       step.token &&
-                        <div key={index} className="log-entry">
-                            <span className="log-step-number">{index + 1}.</span> {step.explanation}
-                        </div>
+        
+        {error && <div className="error-message">{error}</div>}
+        
+        {steps.length > 0 && !error && (
+            <div className="expression-display">
+                <div className="given-expression">
+                  <strong>Processing:</strong>
+                  <div className="expression-string">
+                    {expressionTokens.map((t, index) => (
+                      <span key={index} className={index === currentData.tokenIndex ? 'highlight-token' : 'token'}>
+                        {t}
+                      </span>
                     ))}
-                    {currentStep === steps.length - 1 && (
-                         <div className="log-entry log-output">
-                            <strong>Final Postfix:</strong>
-                            <span>{steps[steps.length - 1].postfix.join(' ')}</span>
-                        </div>
-                    )}
+                  </div>
                 </div>
             </div>
         )}
+        <div className="main-content-area">
+          <div className="panels-container">
+            <div className="panel algorithm-panel"><h3>Algorithm Steps</h3><ol>{algorithmRules.map((rule, index) => (<AlgorithmRule key={index} rule={rule} path={[index]} highlightedPath={currentData.highlightedRulePath} />))}</ol></div>
+            <div className="panel explanation-panel"><h3>Explanation</h3><p>{currentData.explanation}</p></div>
+            <div className="panel visualization-panel">
+              <h3>Visualization</h3>
+              <div className="stack-container">
+                <h3>Operator Stack</h3>
+                <div className="stack-visual-wrapper">
+                  <div className="stack-indices">{stack.map((_, index) => <div key={index} className="stack-index">{index}</div>)}</div>
+                  <div className="stack-visual">{stack.map((item, index) => <div key={index} className="stack-element">{item}</div>)}</div>
+                  {stack.length > 0 && <div className="stack-top-pointer" style={{ bottom: `${(stack.length-1) * 44 + 22}px`}}>TOP</div>}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="panel output-panel">
+              <h3>Postfix Output</h3>
+              <div className="output-visual">
+                {currentData.postfix.map((item, index) => (
+                  <div key={`${index}-${item}`} className={`postfix-element ${index === currentData.postfix.length - 1 && currentData.animatePostfix ? 'animate-add' : ''}`}>
+                    {item}
+                  </div>
+                ))}
+              </div>
+          </div>
+          {steps.length > 1 && !error && (
+              <div className="panel log-panel">
+                  <h3>
+                    Operations Log
+                    {currentStep === steps.length - 1 && (
+                      <BlobProvider
+                        document={
+                         <LogPDF
+                          title="Infix to Postfix Conversion Log"
+                          type="conversion"
+                          initialExpression={cleanInfix}
+                          stepsData={steps.slice(1)}
+                          finalResult={`Final Postfix: ${steps[steps.length - 1].postfix.join(' ')}`}
+                        />
+                        }
+                      >
+                        {({ url, loading }) =>
+                          loading ? (
+                            <button className="save-log-button">Generating PDF...</button>
+                          ) : (
+                            <a href={url} download="infix-to-postfix-log.pdf" className="save-log-button" style={{textDecoration: 'none'}}>
+                              <Download size={14} style={{ marginRight: '8px' }}/>
+                              Save Log as PDF
+                            </a>
+                          )
+                        }
+                      </BlobProvider>
+                    )}
+                  </h3>
+                  <div className="log-container" ref={logContainerRef}>
+                      <div className="log-entry log-input">
+                          <strong>Input Expression:</strong>
+                          <span>{infix}</span>
+                      </div>
+                      {steps.slice(1, currentStep + 1).map((step, index) => (
+                         step.token &&
+                          <div key={index} className="log-entry">
+                              <span className="log-step-number">{index + 1}.</span> {step.explanation}
+                          </div>
+                      ))}
+                      {currentStep === steps.length - 1 && (
+                           <div className="log-entry log-output">
+                              <strong>Final Postfix:</strong>
+                              <span>{steps[steps.length - 1].postfix.join(' ')}</span>
+                          </div>
+                      )}
+                  </div>
+              </div>
+          )}
+        </div>
       </div>
+
+      {/* The footer now lives outside the main content container */}
+      <footer className="app-footer">
+        © 2025 Naresh Kumar Siripurapu. All Rights Reserved.
+      </footer>
+      
     </div>
   );
 }

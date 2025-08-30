@@ -23,7 +23,6 @@ const styles = StyleSheet.create({
   page: {
     padding: 30,
     fontFamily: 'Helvetica',
-    backgroundColor: '#FFFFFF',
   },
   header: {
     fontSize: 20,
@@ -41,18 +40,87 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontFamily: 'Helvetica',
     fontWeight: 'bold',
-    color: '#333',
+    color: '#0056b3',
   },
   contentBox: {
     fontSize: 10,
     fontFamily: 'Courier',
-    backgroundColor: '#f2f2f2',
     padding: 12,
     borderRadius: 5,
     border: '1px solid #e0e0e0',
   },
-  line: {
-    marginBottom: 5,
+  stepContainer: {
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottom: '1px solid #e0e0e0',
+  },
+  lastStepContainer: {
+    marginBottom: 0,
+    paddingBottom: 0,
+    borderBottom: 'none',
+  },
+  explanationText: {
+    fontSize: 10,
+    fontFamily: 'Helvetica',
+    lineHeight: 1.4,
+    color: '#444444',
+  },
+  explanationBlock: {
+    backgroundColor: '#f8f9fa',
+    padding: 8,
+    borderRadius: 4,
+    border: '1px solid #e9ecef',
+    marginBottom: 8,
+  },
+  // ===== NEW STYLE for indented sub-steps =====
+  subStepExplanationBlock: {
+    backgroundColor: '#f8f9fa',
+    padding: '8px 8px 8px 24px', // Adds left indentation
+    borderRadius: 4,
+    border: '1px solid #e9ecef',
+    marginBottom: 8,
+  },
+  tokenDisplay: {
+    marginTop: 4,
+    fontSize: 9,
+    fontFamily: 'Courier',
+    color: '#0056b3',
+    fontWeight: 'bold',
+  },
+  stateRow: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  stackStateBox: {
+    padding: 6,
+    width: '25%',
+  },
+  outputStateBox: {
+    padding: 6,
+    width: '75%',
+  },
+  stateLabel: {
+    fontSize: 10,
+    fontFamily: 'Helvetica',
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  stateContent: {
+    fontSize: 9,
+    fontFamily: 'Courier',
+    color: '#111',
+    minHeight: 10,
+    backgroundColor: '#fafafa',
+    border: '1px solid #e0e0e0',
+    borderRadius: 3,
+    padding: 6,
+    wordBreak: 'break-all',
+  },
+  finalResultText: {
+    color: '#28a745',
+    fontWeight: 'bold',
   },
   footer: {
     position: 'absolute',
@@ -63,13 +131,81 @@ const styles = StyleSheet.create({
     color: 'grey',
     fontSize: 10,
   },
+  stackVisualContainer: {
+    width: '100%',
+    minHeight: 80,
+    borderLeft: '1.5px solid #aaa',
+    borderRight: '1.5px solid #aaa',
+    borderBottom: '1.5px solid #aaa',
+    padding: 2,
+    display: 'flex',
+    flexDirection: 'column-reverse',
+    alignItems: 'center',
+  },
+  stackItem: {
+    backgroundColor: '#cce5ff',
+    border: '1px solid #007bff',
+    borderRadius: 3,
+    width: '85%',
+    textAlign: 'center',
+    padding: 4,
+    marginBottom: 2,
+  },
+  stackItemText: {
+    fontSize: 8,
+    fontFamily: 'Courier',
+    fontWeight: 'bold',
+    color: '#004085',
+  },
+  emptyStackText: {
+    fontSize: 9,
+    color: '#999',
+    marginTop: 30,
+  },
+  watermarkContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  watermarkText: {
+    fontSize: 45,
+    color: 'grey',
+    opacity: 0.2,
+    transform: 'rotate(-45deg)',
+    pointerEvents: 'none',
+  },
 });
 
-// Create the PDF document component
-const LogPDF = ({ initialExpression, logSteps, finalResult }) => (
+const StackVisual = ({ items }) => (
+  <View style={styles.stackVisualContainer}>
+    {items && items.length > 0 ? (
+      items.map((item, index) => (
+        <View key={index} style={styles.stackItem}>
+          <Text style={styles.stackItemText}>
+            {typeof item === 'number' && !Number.isInteger(item) ? item.toFixed(2) : item}
+          </Text>
+        </View>
+      ))
+    ) : (
+      <Text style={styles.emptyStackText}>[Empty]</Text>
+    )}
+  </View>
+);
+
+const LogPDF = ({ title, type, initialExpression, stepsData, finalResult }) => (
   <Document>
     <Page size="A4" style={styles.page}>
-      <Text style={styles.header}>Stack Visualizer Operations Log</Text>
+      
+      <View style={styles.watermarkContainer} fixed>
+        <Text style={styles.watermarkText}>Naresh Kumar Siripurapu</Text>
+      </View>
+      
+      <Text style={styles.header}>{title || 'Stack Operation Log'}</Text>
 
       <View style={styles.section}>
         <Text style={styles.label}>Input Expression</Text>
@@ -81,10 +217,48 @@ const LogPDF = ({ initialExpression, logSteps, finalResult }) => (
       <View style={styles.section}>
         <Text style={styles.label}>Operations Log</Text>
         <View style={styles.contentBox}>
-          {logSteps.map((line, i) => (
-            <Text key={i} style={styles.line}>
-              {line}
-            </Text>
+          {stepsData.map((step, index) => (
+            <View 
+              key={index} 
+              style={index === stepsData.length - 1 ? styles.lastStepContainer : styles.stepContainer}
+              wrap={false}
+            >
+              {/* ===== UPDATED LOGIC for visual hierarchy ===== */}
+              <View style={step.isSubStep ? styles.subStepExplanationBlock : styles.explanationBlock}>
+                <Text style={styles.explanationText}>
+                  {!step.isSubStep && `${index + 1}. `}{step.explanation}
+                </Text>
+                {step.token && (
+                  <Text style={styles.tokenDisplay}>
+                    Token Processed: {step.token}
+                  </Text>
+                )}
+              </View>
+
+              {type === 'conversion' ? (
+                <View style={styles.stateRow}>
+                  <View style={styles.stackStateBox}>
+                    <Text style={styles.stateLabel}>Stack:</Text>
+                    <StackVisual items={step.stack} />
+                  </View>
+                  <View style={styles.outputStateBox}>
+                    <Text style={styles.stateLabel}>Output:</Text>
+                    <Text style={styles.stateContent}> 
+                      {
+                        (step.postfix && step.postfix.length > 0) 
+                          ? step.postfix.join(' ') 
+                          : (step.prefix || '[Empty]')
+                      }
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.stackStateBox}>
+                  <Text style={styles.stateLabel}>Stack:</Text>
+                  <StackVisual items={step.stack} />
+                </View>
+              )}
+            </View>
           ))}
         </View>
       </View>
@@ -92,7 +266,7 @@ const LogPDF = ({ initialExpression, logSteps, finalResult }) => (
       <View style={styles.section}>
         <Text style={styles.label}>Final Result</Text>
         <View style={styles.contentBox}>
-           <Text>{finalResult}</Text>
+           <Text style={styles.finalResultText}>{finalResult}</Text>
         </View>
       </View>
 

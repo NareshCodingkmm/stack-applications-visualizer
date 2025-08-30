@@ -12,8 +12,8 @@ const algorithmRules = [
   { 
     text: "If the symbol is an operator:",
     subSteps: [
-      { text: "Perform the pop operation twice to get operand1 and operand2 respectively." },
-      { text: "Perform the calculation: result = operand1 (operator) operand2" },
+      { text: "Perform the pop operation twice to get operand-1 and operand-2 respectively." },
+      { text: "Perform the calculation: result = operand-1 (operator) operand-2" },
       { text: "Push the result back onto the stack." }
     ]
   },
@@ -28,7 +28,6 @@ const validatePrefix = (expression, tokens) => {
     }
 
     let count = 0;
-    // Validate by reading right-to-left
     for (let i = tokens.length - 1; i >= 0; i--) {
         const token = tokens[i];
         if (!isNaN(parseFloat(token))) {
@@ -61,7 +60,7 @@ function AlgorithmRule({ rule, path, highlightedPath }) {
 
 
 function PrefixEvaluationVisualizer() {
-  const [prefix, setPrefix] = useState('- + * 5 3 8 / 4 2');
+  const [prefix, setPrefix] = useState('- * 2 + 4 6 / 10 5');
   const [steps, setSteps] = useState([]);
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -128,13 +127,23 @@ function PrefixEvaluationVisualizer() {
         step.stack = [...stack];
         step.explanation = `Symbol is an operand ('${token}'). Push it onto the stack.`;
         step.highlightedRulePath = [1];
+        newSteps.push(step);
       } else if (isOperator(token)) {
         if (stack.length < 2) {
             setError("Invalid Prefix Expression: Not enough operands for operator.");
             return;
         }
-        const operand1 = stack.pop();
-        const operand2 = stack.pop();
+        
+        // ===== THIS IS THE NEW, MORE DETAILED EXPLANATION LOGIC =====
+        const operand1 = stack.pop(); // This is operand-1 (top of stack)
+        const operand2 = stack.pop(); // This is operand-2 (second from top)
+        newSteps.push({
+          ...step,
+          stack: [...stack],
+          explanation: `Symbol is an operator ('${token}'), so perform pop operation twice. Popped operands are - Operand-1 (top): ${operand1}, Operand-2: ${operand2}.`,
+          highlightedRulePath: [2, 0]
+        });
+
         let result;
         switch (token) {
             case '+': result = operand1 + operand2; break;
@@ -150,12 +159,25 @@ function PrefixEvaluationVisualizer() {
             case '^': result = Math.pow(operand1, operand2); break;
             default: break;
         }
+        
+        newSteps.push({
+          ...step,
+          stack: [...stack],
+          explanation: `Performing operation {operand-1 ${token} operand-2} => ${operand1} ${token} ${operand2} = ${result}.`,
+          highlightedRulePath: [2, 1],
+          isSubStep: true // Mark as a sub-step
+        });
+        
         stack.push(result);
-        step.stack = [...stack];
-        step.explanation = `Symbol is an operator ('${token}'). Pop ${operand1} and ${operand2}. Calculate ${operand1} ${token} ${operand2} = ${result}. Push result onto stack.`;
-        step.highlightedRulePath = [2, 0, 1, 2];
+        newSteps.push({
+            ...step,
+            stack: [...stack],
+            explanation: `Push the result ('${result}') back onto the stack.`,
+            highlightedRulePath: [2, 2],
+            isSubStep: true // Mark as a sub-step
+        });
+        // =============================================================
       }
-      newSteps.push(step);
     });
     
     newSteps.push({
@@ -184,25 +206,26 @@ function PrefixEvaluationVisualizer() {
   };
 
   return (
-    <div className="visualizer-container">
-      <div className="controls">
-        <div className="input-group">
-            <label htmlFor="prefix-input">Prefix Expression:</label>
-            <input id="prefix-input" type="text" value={prefix} onChange={(e) => { setPrefix(e.target.value); setError(null); }} />
-            <small className="input-note">Note: Please enter spaces between each number and operator.</small>
+    <div className="app-container">
+      <div className="visualizer-container">
+        <div className="controls">
+          <div className="input-group">
+              <label htmlFor="prefix-input">Prefix Expression:</label>
+              <input id="prefix-input" type="text" value={prefix} onChange={(e) => { setPrefix(e.target.value); setError(null); }} />
+              <small className="input-note">Note: Please enter spaces between each number and operator.</small>
+          </div>
+          <button onClick={generateSteps}><Binary size={18}/> Evaluate</button>
+          <button onClick={handleReset} className="clear-button"><RotateCcw size={18}/> Clear</button>
+          <div className="navigation-controls">
+            <button onClick={handlePrev} disabled={currentStep === 0}><SkipBack size={20}/></button>
+            <button onClick={handlePlayPause} disabled={steps.length > 0 && currentStep === steps.length - 1}>{isPlaying ? <Pause size={20}/> : <Play size={20}/>}</button>
+            <button onClick={handleNext} disabled={currentStep >= steps.length - 1}><SkipForward size={20}/></button>
+          </div>
         </div>
-        <button onClick={generateSteps}><Binary size={18}/> Evaluate</button>
-        <button onClick={handleReset} className="clear-button"><RotateCcw size={18}/> Clear</button>
-        <div className="navigation-controls">
-          <button onClick={handlePrev} disabled={currentStep === 0}><SkipBack size={20}/></button>
-          <button onClick={handlePlayPause} disabled={steps.length > 0 && currentStep === steps.length - 1}>{isPlaying ? <Pause size={20}/> : <Play size={20}/>}</button>
-          <button onClick={handleNext} disabled={currentStep >= steps.length - 1}><SkipForward size={20}/></button>
-        </div>
-      </div>
-      
-      {error && <div className="error-message">{error}</div>}
+        
+        {error && <div className="error-message">{error}</div>}
 
-      {steps.length > 0 && !error && (
+        {steps.length > 0 && !error && (
           <div className="expression-display">
               <div className="given-expression">
                 <strong>Processing:</strong>
@@ -215,32 +238,32 @@ function PrefixEvaluationVisualizer() {
                 </div>
               </div>
           </div>
-      )}
+        )}
 
-      <div className="main-content-area">
-        <div className="panels-container">
-          <div className="panel algorithm-panel"><h3>Algorithm Steps</h3><ol>{algorithmRules.map((rule, index) => (<AlgorithmRule key={index} rule={rule} path={[index]} highlightedPath={currentData.highlightedRulePath} />))}</ol></div>
-          <div className="panel explanation-panel"><h3>Explanation</h3><p>{currentData.explanation}</p></div>
-          <div className="panel visualization-panel">
-            <h3>Visualization</h3>
-            <div className="stack-container">
-              <h3>Operand Stack</h3>
-              <div className="stack-visual-wrapper">
-                <div className="stack-indices">{stack.map((_, index) => <div key={index} className="stack-index">{index}</div>)}</div>
-                <div className="stack-visual">{stack.map((item, index) => <div key={index} className="stack-element">{Number.isInteger(item) ? item : item.toFixed(2)}</div>)}</div>
-                {stack.length > 0 && <div className="stack-top-pointer" style={{ bottom: `${(stack.length-1) * 44 + 22}px`}}>TOP</div>}
+        <div className="main-content-area">
+          <div className="panels-container">
+            <div className="panel algorithm-panel"><h3>Algorithm Steps</h3><ol>{algorithmRules.map((rule, index) => (<AlgorithmRule key={index} rule={rule} path={[index]} highlightedPath={currentData.highlightedPath} />))}</ol></div>
+            <div className="panel explanation-panel"><h3>Explanation</h3><p>{currentData.explanation}</p></div>
+            <div className="panel visualization-panel">
+              <h3>Visualization</h3>
+              <div className="stack-container">
+                <h3>Operand Stack</h3>
+                <div className="stack-visual-wrapper">
+                  <div className="stack-indices">{stack.map((_, index) => <div key={index} className="stack-index">{index}</div>)}</div>
+                  <div className="stack-visual">{stack.map((item, index) => <div key={index} className="stack-element">{Number.isInteger(item) ? item : item.toFixed(2)}</div>)}</div>
+                  {stack.length > 0 && <div className="stack-top-pointer" style={{ bottom: `${(stack.length-1) * 44 + 22}px`}}>TOP</div>}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div className="panel output-panel">
-            <h3>Final Answer</h3>
-            <div className="output-visual">
-              {currentStep === steps.length - 1 ? (getFinalResult().replace('Final Answer: ', '')) : ''}
-            </div>
-        </div>
-        
-        {steps.length > 1 && !error && (
+          <div className="panel output-panel">
+              <h3>Final Answer</h3>
+              <div className="output-visual">
+                {currentStep === steps.length - 1 ? (getFinalResult().replace('Final Answer: ', '')) : ''}
+              </div>
+          </div>
+          
+          {steps.length > 1 && !error && (
             <div className="panel log-panel">
                 <h3>
                   Operations Log
@@ -248,8 +271,10 @@ function PrefixEvaluationVisualizer() {
                     <BlobProvider
                       document={
                         <LogPDF
+                          title="Prefix Evaluation Log"
+                          type="evaluation"
                           initialExpression={prefix}
-                          logSteps={steps.slice(1).map((step, index) => `${index + 1}. ${step.explanation}`)}
+                          stepsData={steps.slice(1)}
                           finalResult={getFinalResult()}
                         />
                       }
@@ -280,8 +305,12 @@ function PrefixEvaluationVisualizer() {
                     )}
                 </div>
             </div>
-        )}
+          )}
+        </div>
       </div>
+      <footer className="app-footer">
+        © 2025 Naresh Kumar Siripurapu. All Rights Reserved.
+      </footer>
     </div>
   );
 }

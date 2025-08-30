@@ -299,8 +299,10 @@ function InfixToPrefixVisualizer() {
                     <BlobProvider
                       document={
                         <LogPDF
+                          title="Infix to Prefix Conversion Log"
+                          type="conversion"
                           initialExpression={cleanInfix}
-                          logSteps={steps.slice(1).map((step, index) => `${index + 1}. ${step.explanation}`)}
+                          stepsData={steps.slice(1)}
                           finalResult={`Final Prefix: ${steps[steps.length - 1].prefix}`}
                         />
                       }
@@ -333,6 +335,9 @@ function InfixToPrefixVisualizer() {
             </div>
         )}
       </div>
+      <footer className="app-footer">
+      © 2025 Naresh Kumar Siripurapu. All Rights Reserved.
+    </footer>
     </div>
   );
 }

@@ -383,7 +383,6 @@
   align-items: center;
 }
 
-/* ===== NEW, ENHANCED STYLES FOR SAVE LOG BUTTON ===== */
 .save-log-button {
     font-size: 0.8rem;
     padding: 0.4rem 0.8rem;
@@ -415,12 +414,25 @@
 .save-log-button:hover svg {
     transform: translateY(2px);
 }
-/* ===== END OF ENHANCED STYLES ===== */
-
 
 .log-entry:last-child {
   border-bottom: none;
   padding-bottom: 0;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Make container at least the full height of the viewport */
+}
+
+.app-footer {
+  width: 100%;
+  text-align: center;
+  padding: 1rem;
+  margin-top: auto; /* This is the magic that pushes it to the bottom */
+  color: #808080;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 1200px) {
